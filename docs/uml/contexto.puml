@@ -1,0 +1,36 @@
+@startuml contexto
+' SentinelaTI - Diagrama de contexto del sistema (ERS v1.0, sección 2.1)
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 13
+skinparam actorStyle awesome
+skinparam rectangle {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+skinparam database {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+skinparam ArrowColor #333333
+
+actor "Técnico /\nAdministrador de TI" as TI
+actor "Usuario final" as UF
+
+rectangle "Equipo cliente (Windows 10/11)" as PC {
+  rectangle "Agente\n(servicio de Windows)" as AG
+}
+rectangle "Servidor" as SRV {
+  rectangle "API REST\n(FastAPI)" as API
+  database "PostgreSQL" as DB
+}
+rectangle "Panel web\n(React)" as WEB
+
+AG --> API : HTTPS + token\nPOST lecturas\nGET comandos (cada 60 s)
+API --> DB
+WEB --> API : HTTPS + JWT
+TI --> WEB
+AG --> UF : avisos (RF15)
+@enduml

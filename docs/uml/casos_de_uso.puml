@@ -1,0 +1,70 @@
+@startuml casos_de_uso
+' SentinelaTI - Diagrama de casos de uso (L2, ERS v1.0)
+' Render: java -jar plantuml.jar -tpng casos_de_uso.puml (no requiere Graphviz)
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 13
+skinparam actorStyle awesome
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam usecase {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  ArrowColor #333333
+}
+skinparam rectangle {
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}
+
+actor "Administrador de TI" as ADM
+actor "Técnico de TI" as TEC
+actor "Agente «sistema»" as AGE
+actor "Usuario final" as USF
+
+rectangle "SentinelaTI" {
+  usecase "CU06 Configurar\numbrales de alerta" as CU06
+  usecase "CU10 Gestionar\nusuarios y roles" as CU10
+  usecase "CU03 Iniciar sesión" as CU03
+  usecase "CU04 Consultar\nestado del parque" as CU04
+  usecase "CU11 Consultar\nbitácora de auditoría" as CU11
+  usecase "CU05 Consultar detalle\ne historial de equipo\n--\nextension points:\nacción sobre el equipo" as CU05
+  usecase "CU07 Ejecutar\nacción remota" as CU07
+  usecase "CU08 Notificar al\nusuario final" as CU08
+  usecase "CU09 Registrar en\nbitácora de auditoría" as CU09
+  usecase "CU01 Enrolar equipo" as CU01
+  usecase "CU02 Reportar\nestado del equipo" as CU02
+
+  usecase "Reiniciar /\napagar" as A1
+  usecase "Instalar aplicación\ndel catálogo" as A2
+  usecase "Actualizar SO\n(simulado)" as A3
+  usecase "Formatear equipo\n(simulado, solo Admin)" as A4
+  usecase "Escritorio remoto\n(simulado)" as A5
+}
+
+ADM -down-|> TEC
+
+ADM --> CU06
+ADM --> CU10
+TEC --> CU03
+TEC --> CU04
+TEC --> CU11
+TEC --> CU05
+TEC --> CU07
+
+CU05 <.down. CU07 : <<extend>>
+CU07 .down.> CU08 : <<include>>
+CU07 .down.> CU09 : <<include>>
+
+A1 -up-|> CU07
+A2 -up-|> CU07
+A3 -up-|> CU07
+A4 -up-|> CU07
+A5 -up-|> CU07
+
+CU01 <-- AGE
+CU02 <-- AGE
+CU07 --> AGE
+CU08 --> USF
+@enduml

@@ -1,0 +1,100 @@
+@startuml secuencia_cu01
+' SentinelaTI - Diagrama de secuencia CU01 "Enrolar equipo" (L3)
+' Render: java -jar plantuml.jar -tpng secuencia_cu01.puml (no requiere Graphviz)
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 12
+skinparam ArrowColor #333333
+skinparam maxMessageSize 220
+skinparam sequence {
+  ParticipantBackgroundColor #EAF4F5
+  ParticipantBorderColor #1F6F78
+  ActorBackgroundColor #EAF4F5
+  ActorBorderColor #1F6F78
+  LifeLineBorderColor #1F6F78
+  BoxBackgroundColor #FBFBFB
+  BoxBorderColor #1F6F78
+  GroupBackgroundColor #EAF4F5
+  GroupBorderColor #1F6F78
+}
+
+title CU01 — Enrolar equipo (primer arranque del agente)
+
+actor "Administrador de TI" as ADM
+box "Equipo cliente" #FFFFFF
+  participant "ag:AgenteSentinela" as AG
+  participant ":AlmacenToken" as AT
+  participant ":RecolectorInventario" as RI
+  participant ":ClienteAPI" as CLI
+end box
+box "Servidor (API REST)" #FFFFFF
+  control ":ServicioEnrolamiento" as SE
+  entity "eExistente:Equipo" as EQX
+  entity "e:Equipo" as EQ2
+  entity "t:TokenAgente" as TOK
+end box
+
+autonumber "<b>0"
+
+ADM -> AG : instalar el agente con privilegios\nde administrador e ingresar el\ncódigo de enrolamiento
+activate AG
+
+AG -> AT : leer()
+activate AT
+AT --> AG : vacío (no hay token guardado)
+deactivate AT
+
+AG -> RI : leerHardware()
+activate RI
+RI --> AG : d : DatosEquipo\n(nombre, nº de serie, modelo, IP)
+deactivate RI
+
+AG -> CLI : postEnrolamiento(codigo, d)
+activate CLI
+CLI -> SE : POST /enrolamiento (HTTPS, RNF01)
+activate SE
+
+alt el servidor no responde (excepción 2a)
+  CLI --> AG : error de red
+  AG -> AG : reintentar con espera creciente\n(1, 2, 4 … hasta 15 min)
+else el servidor responde
+  SE -> SE : validarCodigo(codigo)
+
+  alt el código es inválido o está vencido (excepción 3a)
+    SE --> CLI : HTTP 400 — código inválido
+    CLI --> AG : 400
+    AG -> AG : anotar el error en el log local\ny reintentar cada 15 min
+    note right of AG : No se crea ningún registro\nen el servidor.
+  else el código es válido
+    SE -> SE : buscarPorNumeroSerie(d.numeroSerie)
+
+    alt el número de serie ya está registrado (flujo alternativo 4a)
+      SE -> EQX : recuperar equipo existente
+      activate EQX
+      EQX -> EQX : revocarTokenVigente()
+      EQX --> SE : equipo reutilizado
+      deactivate EQX
+      note right of SE : Reinstalación del agente:\nse reutiliza el equipo y se\nrevoca el token anterior.
+    else el número de serie es nuevo
+      SE -> EQ2 : <<create>> Equipo(d, estado = Normal)
+    end
+
+    SE -> TOK : <<create>> TokenAgente(valor, fechaEmision)
+    SE --> CLI : 201 Created { idEquipo, token }
+    deactivate SE
+    CLI --> AG : idEquipo, token
+    deactivate CLI
+
+    AG -> AT : guardar(token)
+    activate AT
+    AT --> AG : token almacenado de forma protegida
+    deactivate AT
+
+    ref over AG, SE : CU02 — Reportar estado del equipo\n(primer reporte inmediato)
+
+    AG --> ADM : el equipo aparece en el panel\ncon estado Normal
+  end
+end
+deactivate AG
+@enduml

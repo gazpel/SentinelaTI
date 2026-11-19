@@ -1,0 +1,151 @@
+@startuml clases_agente
+' SentinelaTI - Diagrama de clases del agente (L3)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_agente.puml (requiere Graphviz; tambien se puede pegar en https://plantuml.com/plantuml)
+hide circle
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam nodesep 25
+skinparam ranksep 45
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam class {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+  AttributeFontSize 10
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}
+
+title Diagrama de clases del agente SentinelaTI (equipo cliente)
+
+package "Agente (servicio de Windows)" {
+  class AgenteSentinela {
+    - idEquipo : UUID [0..1]
+    - token : String [0..1]
+    - intervaloReporteMin : Integer = 5
+    - intervaloComandosSeg : Integer = 60
+    + iniciar() : void
+    + enrolar(codigo : String) : Boolean
+    + cicloReporte() : void
+    + cicloComandos() : void
+    + ejecutarComando(c : Comando) : ResultadoEjecucion
+    + estaEnrolado() : Boolean
+  }
+
+  class RecolectorMetricas {
+    + leerCPU() : Real
+    + leerRAM() : Real
+    + leerDiscos() : UsoDisco [1..*]
+    + leerTemperatura() : Real [0..1]
+    + leerHorasEncendido() : Real
+    + componerLectura() : Lectura
+  }
+
+  class RecolectorInventario {
+    + leerHardware() : DatosEquipo
+    + leerAplicaciones() : AplicacionInstalada [0..*]
+    + leerActualizacionesPendientes() : Integer
+  }
+
+  class ColaLocalLecturas {
+    - rutaAlmacen : String
+    - retencionHoras : Integer = 72
+    + encolar(l : Lectura) : void
+    + pendientes() : Lectura [0..*]
+    + confirmarEnvio(l : Lectura) : void
+    + purgarAntiguas() : void
+  }
+
+  class ClienteAPI {
+    - urlBase : String
+    - token : String [0..1]
+    + postEnrolamiento(codigo : String, d : DatosEquipo) : TokenAgente
+    + postLectura(l : Lectura) : Boolean
+    + postInventario(i : Inventario) : Boolean
+    + getComandosPendientes() : Comando [0..*]
+    + postEstadoActualizaciones(e : EstadoActualizacionSO) : Boolean
+    + postResultado(id : UUID, r : ResultadoEjecucion) : Boolean
+  }
+
+  class NotificadorUsuario {
+    + mostrarAviso(a : AvisoUsuario) : DesenlaceAviso
+    + mostrarIconoBandeja() : void
+  }
+
+  abstract class EjecutorAccion {
+    # simulado : Boolean
+    + {abstract} soporta(t : TipoAccion) : Boolean
+    + {abstract} ejecutar(c : Comando) : ResultadoEjecucion
+  }
+
+  class EjecutorReinicioApagado {
+    + soporta(t : TipoAccion) : Boolean
+    + ejecutar(c : Comando) : ResultadoEjecucion
+  }
+
+  class EjecutorInstalacion {
+    + soporta(t : TipoAccion) : Boolean
+    + ejecutar(c : Comando) : ResultadoEjecucion
+  }
+
+  class EjecutorSimulado {
+    + soporta(t : TipoAccion) : Boolean
+    + ejecutar(c : Comando) : ResultadoEjecucion
+  }
+
+  class AlmacenToken {
+    + guardar(t : String) : void
+    + leer() : String [0..1]
+    + borrar() : void
+  }
+
+  AgenteSentinela "1" *-- "1" RecolectorMetricas : usa >
+  AgenteSentinela "1" *-- "1" RecolectorInventario : usa >
+  AgenteSentinela "1" *-- "1" ColaLocalLecturas : respalda en >
+  AgenteSentinela "1" *-- "1" ClienteAPI : comunica por >
+  AgenteSentinela "1" *-- "1" NotificadorUsuario : avisa con >
+  AgenteSentinela "1" *-- "1" AlmacenToken : guarda token en >
+  AgenteSentinela "1" o-- "1..*" EjecutorAccion : delega en >
+
+  EjecutorAccion <|-- EjecutorReinicioApagado
+  EjecutorAccion <|-- EjecutorInstalacion
+  EjecutorAccion <|-- EjecutorSimulado
+}
+
+package "Sistemas externos" <<Frame>> {
+  interface "«externo»\nWMI / psutil" as WMI
+  interface "«externo»\nWindows Update" as WU
+  interface "«externo»\nwinget" as WG
+  interface "«externo»\nAPI REST SentinelaTI" as APIREST
+}
+
+RecolectorMetricas ..> WMI : <<use>>
+RecolectorInventario ..> WMI : <<use>>
+RecolectorInventario ..> WU : <<use>>
+EjecutorInstalacion ..> WG : <<use>>
+EjecutorReinicioApagado ..> WMI : <<use>>
+ClienteAPI ..> APIREST : <<use>>
+
+note bottom of EjecutorSimulado
+  Atiende ActualizarSO, Formatear y
+  EscritorioRemoto (RF10–RF12): registra la
+  orden y devuelve «Ejecutado (simulado)»
+  sin modificar el equipo.
+end note
+
+note right of ColaLocalLecturas
+  Realiza RNF04: conserva al menos 72 h de
+  lecturas sin conexión y las reenvía en orden
+  cronológico, sin pérdidas ni duplicados.
+end note
+@enduml

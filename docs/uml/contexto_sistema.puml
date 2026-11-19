@@ -1,0 +1,57 @@
+@startuml contexto_sistema
+' SentinelaTI - Modelo de contexto del sistema (L3)
+' Refina la Figura 1 del L2: delimita la frontera de SentinelaTI y los sistemas externos.
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng contexto_sistema.puml (requiere Graphviz; tambien se puede pegar en https://plantuml.com/plantuml)
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 12
+skinparam actorStyle awesome
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+}
+skinparam database {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+
+title Modelo de contexto de SentinelaTI
+
+actor "Administrador\nde TI" as ADM
+actor "Técnico\nde TI" as TEC
+actor "Usuario final\n(trabajador)" as USF
+
+rectangle "**SentinelaTI** (sistema en desarrollo)" as SYS #FFFFFF {
+  rectangle "Agente\n(servicio de Windows)" as AG
+  rectangle "API REST\n(FastAPI)" as API
+  database "Base de datos\n(PostgreSQL)" as DB
+  rectangle "Panel web\n(React)" as WEB
+
+  AG -right-> API : lecturas e inventario (HTTPS + token)\ncomandos pendientes (polling 60 s)
+  WEB -left-> API : operaciones del panel (HTTPS + JWT)
+  API -down-> DB : lee / escribe
+}
+
+rectangle "Sistema operativo\nWindows 10/11\n(WMI, psutil, servicios)" as WIN #F5F5F5
+rectangle "Windows Update" as WU #F5F5F5
+rectangle "winget\n(repositorio de\naplicaciones)" as WG #F5F5F5
+rectangle "Navegador web\n(Chrome, Edge, Firefox)" as NAV #F5F5F5
+
+AG -down-> WIN : lee métricas, inventario\ny ordena reinicio / apagado
+AG -down-> WU : consulta actualizaciones\npendientes (RF04)
+AG -down-> WG : instala aplicaciones\ndel catálogo (RF09)
+AG -up-> USF : aviso previo a la acción (RF15)\ne ícono de bandeja (RNF11)
+
+ADM -down-> NAV
+TEC -down-> NAV
+NAV -down-> WEB : HTTPS
+
+legend bottom
+  |<#EAF4F5> | Elemento dentro de la frontera de SentinelaTI |
+  |<#F5F5F5> | Sistema externo (no se desarrolla en este proyecto) |
+endlegend
+@enduml

@@ -1,0 +1,21 @@
+' Estilo común de los diagramas de secuencia del L4 (se incluye con !include)
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 12
+skinparam ArrowColor #333333
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 4
+skinparam BoxPadding 4
+skinparam sequence {
+  ParticipantBackgroundColor #EAF4F5
+  ParticipantBorderColor #1F6F78
+  ActorBackgroundColor #EAF4F5
+  ActorBorderColor #1F6F78
+  LifeLineBorderColor #1F6F78
+  BoxBackgroundColor #FBFBFB
+  BoxBorderColor #1F6F78
+  GroupBackgroundColor #EAF4F5
+  GroupBorderColor #1F6F78
+}
+hide unlinked

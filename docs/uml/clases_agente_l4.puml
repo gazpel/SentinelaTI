@@ -1,35 +1,8 @@
 @startuml clases_agente_l4
 ' SentinelaTI - Diagrama de clases refinado del agente (L4)
 ' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_agente_l4.puml
-hide circle
-hide empty members
-skinparam dpi 150
-skinparam shadowing false
-skinparam defaultFontName Calibri
-skinparam defaultFontSize 11
-skinparam nodesep 25
-skinparam ranksep 45
-skinparam ArrowColor #333333
-skinparam ArrowFontSize 10
-skinparam class {
-  BackgroundColor #EAF4F5
-  BorderColor #1F6F78
-  FontColor #0B3C40
-  AttributeFontSize 10
-  BackgroundColor<<modificada>> #FFF1CC
-  BorderColor<<modificada>> #B7791F
-  BackgroundColor<<nueva>> #E3F2E1
-  BorderColor<<nueva>> #2F7D32
-}
-skinparam interface {
-  BackgroundColor #FFFFFF
-  BorderColor #1F6F78
-}
-skinparam package {
-  BackgroundColor #FFFFFF
-  BorderColor #1F6F78
-  FontColor #1F6F78
-}
+!include estilo_clases_l4.iuml
+left to right direction
 
 title Diagrama de clases refinado (L4) — agente SentinelaTI
 
@@ -59,16 +32,20 @@ package "Agente (servicio de Windows)" {
     + confirmarEnvio(l : Lectura) : void
   }
   class ClienteAPI <<modificada>> {
-    + postEnrolamiento(codigo : String, d : DatosEquipo) : TokenAgente
+    + postEnrolamiento(codigo, d : DatosEquipo) : TokenAgente
     + postLectura(l : Lectura) : Boolean
     + postInventario(i : Inventario) : Boolean
-    + postEstadoActualizaciones(e : EstadoActualizacionSO) : Boolean
+    + postEstadoActualizaciones(e) : Boolean
     + getComandosPendientes() : OrdenComando [0..*]
     + postResultado(id : UUID, r : ResultadoEjecucion) : Boolean
   }
   class NotificadorUsuario <<modificada>> {
     + mostrarAviso(o : OrdenComando) : DesenlaceAviso
     + mostrarIconoBandeja() : void
+  }
+  class AlmacenToken {
+    + guardar(t : String) : void
+    + leer() : String [0..1]
   }
   abstract class EjecutorAccion <<modificada>> {
     # simulado : Boolean
@@ -78,10 +55,6 @@ package "Agente (servicio de Windows)" {
   class EjecutorReinicioApagado <<modificada>>
   class EjecutorInstalacion <<modificada>>
   class EjecutorSimulado <<modificada>>
-  class AlmacenToken {
-    + guardar(t : String) : void
-    + leer() : String [0..1]
-  }
 
   AgenteSentinela "1" *-- "1" RecolectorMetricas : usa >
   AgenteSentinela "1" *-- "1" RecolectorInventario : usa >
@@ -95,23 +68,18 @@ package "Agente (servicio de Windows)" {
   EjecutorAccion <|-- EjecutorSimulado
 }
 
-package "Contrato IAgenteAPI" {
-  class OrdenComando <<nueva>> {
-    + idComando : UUID
-    + tipo : TipoAccion
-    + parametros : Map<String, String>
-    + interrumpeUso : Boolean
-    + simulado : Boolean
-  }
+class OrdenComando <<nueva>> {
+  + idComando : UUID
+  + tipo : TipoAccion
+  + parametros : Map<String, String>
+  + interrumpeUso : Boolean
+  + simulado : Boolean
 }
-
 ClienteAPI ..> OrdenComando
 EjecutorAccion ..> OrdenComando
 
-note right of EjecutorAccion
-  Patrón Estrategia: AgenteSentinela elige
-  el ejecutor cuyo soporta(o.tipo) es verdadero.
-  Agregar una acción = agregar un ejecutor,
-  sin modificar el ciclo de comandos.
+note bottom of EjecutorAccion
+  Estrategia: el agente usa el ejecutor
+  cuyo soporta(o.tipo) es verdadero.
 end note
 @enduml

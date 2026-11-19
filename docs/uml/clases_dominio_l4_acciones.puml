@@ -1,0 +1,71 @@
+@startuml clases_dominio_l4_acciones
+' SentinelaTI - Dominio refinado (L4), parte 3: acciones remotas
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_dominio_l4_acciones.puml
+!include estilo_clases_l4.iuml
+
+title Dominio refinado (L4) — acciones remotas
+
+package "Acciones remotas" {
+  abstract class Comando <<modificada>> {
+    - idComando : UUID
+    - estado : EstadoComando
+    - fechaOrden : DateTime
+    - fechaResultado : DateTime [0..1]
+    - motivoFallo : String [0..1]
+    # simulado : Boolean
+    + {abstract} tipo() : TipoAccion
+    + {abstract} interrumpeUso() : Boolean
+    + {abstract} parametros() : Map<String, String>
+    + aOrden() : OrdenComando
+    + marcarEntregado() : void
+    + registrarResultado(r : ResultadoEjecucion) : void
+    + cancelar() : void
+    + expirar() : void
+    + haExpirado(ahora : DateTime) : Boolean
+  }
+  class ComandoReinicioApagado <<modificada>> {
+    - modo : ModoApagado
+  }
+  class ComandoInstalacionApp <<modificada>>
+  class ComandoActualizacionSO <<modificada>>
+  class ComandoFormateo <<modificada>> {
+    - nombreConfirmado : String
+    + confirmacionValida(e : Equipo) : Boolean
+  }
+  class ComandoEscritorioRemoto <<modificada>>
+  class OrdenComando <<nueva>> {
+    + idComando : UUID
+    + tipo : TipoAccion
+    + parametros : Map<String, String>
+    + interrumpeUso : Boolean
+    + simulado : Boolean
+  }
+  class AvisoUsuario <<modificada>> {
+    - pospuesto : Boolean = false
+    - desenlace : DesenlaceAviso
+    + registrarDesenlace(d : DesenlaceAviso) : void
+  }
+  class CatalogoAplicaciones {
+    + contiene(a : AplicacionAprobada) : Boolean
+  }
+  class AplicacionAprobada {
+    - nombre : String
+    - identificadorWinget : String
+  }
+
+  Comando <|-- ComandoReinicioApagado
+  Comando <|-- ComandoInstalacionApp
+  Comando <|-- ComandoActualizacionSO
+  Comando <|-- ComandoFormateo
+  Comando <|-- ComandoEscritorioRemoto
+  Comando .left.> OrdenComando : <<create>>
+  Comando "1" *-right- "0..1" AvisoUsuario : muestra >
+  ComandoInstalacionApp "0..*" --> "1" AplicacionAprobada : instala >
+  CatalogoAplicaciones "1" o-- "0..*" AplicacionAprobada : agrupa >
+}
+
+class "Usuario" as UsuarioRef <<ref>>
+class "Equipo" as EquipoRef <<ref>>
+UsuarioRef "1" -- "0..*" Comando : ordena >
+EquipoRef "1" -- "0..*" Comando : recibe >
+@enduml

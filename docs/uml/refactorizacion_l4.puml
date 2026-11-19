@@ -98,4 +98,8 @@ package "C4 · Persistencia detrás de contratos" {
   SA4 ..> CR
   CRP .up.|> CR
 }
+
+' Distribución en cuadrícula 2 x 2: C1 sobre C3 y C2 sobre C4
+SRD -[hidden]down- AD3
+OC -[hidden]down- SA3
 @enduml

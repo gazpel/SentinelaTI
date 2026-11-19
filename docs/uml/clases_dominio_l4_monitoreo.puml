@@ -1,0 +1,84 @@
+@startuml clases_dominio_l4_monitoreo
+' SentinelaTI - Dominio refinado (L4), parte 2: monitoreo del parque
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_dominio_l4_monitoreo.puml
+!include estilo_clases_l4.iuml
+
+title Dominio refinado (L4) — monitoreo del parque
+
+package "Monitoreo del parque" {
+  class ParqueComputacional <<modificada>> {
+    - nombre : String
+    + listar(estado : EstadoEquipo [0..1]) : Equipo [0..*]
+    + buscar(texto : String) : Equipo [0..*]
+    + resumenPorEstado() : Map<EstadoEquipo, Integer>
+  }
+  class Equipo {
+    - idEquipo : UUID
+    - nombre : String
+    - numeroSerie : String {unique}
+    - direccionIP : String
+    - ultimoUsuario : String
+    - estado : EstadoEquipo
+    - fechaUltimoReporte : DateTime
+    + registrarLectura(l : Lectura) : void
+    + evaluarEstado(c : ConfiguracionUmbrales) : EstadoEquipo
+    + marcarDesconectado() : void
+    + estaEnLinea() : Boolean
+    + actualizarInventario(i : Inventario) : void
+    + actualizarEstadoSO(e : EstadoActualizacionSO) : void
+    + revocarTokenVigente() : void
+  }
+  class TokenAgente {
+    - valor : String
+    - revocado : Boolean
+    + esValido() : Boolean
+  }
+  class Lectura {
+    - marcaTiempo : DateTime
+    - usoCPU : Real
+    - usoRAM : Real
+    - temperaturaCPU : Real [0..1]
+    - horasEncendido : Real
+    + valorDe(m : Metrica) : Real [0..1]
+  }
+  class UsoDisco {
+    - unidad : String
+    - usoPorcentaje : Real
+  }
+  class Inventario
+  class EstadoActualizacionSO
+  class AplicacionInstalada
+  class Alerta {
+    - metrica : Metrica [0..1]
+    - nivel : NivelAlerta
+    - fechaApertura : DateTime
+    - fechaCierre : DateTime [0..1]
+    + estaAbierta() : Boolean
+    + cerrar() : void
+  }
+  class ConfiguracionUmbrales {
+    + umbralDe(m : Metrica) : Umbral
+    + validar() : Boolean
+  }
+  class Umbral {
+    - metrica : Metrica
+    - valorAdvertencia : Real
+    - valorCritico : Real
+    + evaluar(valor : Real) : NivelAlerta
+  }
+
+  ParqueComputacional "1" o-- "0..*" Equipo : agrupa >
+  Equipo "1" *-left- "1..*" TokenAgente : emite >
+  Equipo "1" *-- "0..*" Lectura : registra >
+  Lectura "1" *-- "1..*" UsoDisco : detalla >
+  Equipo "1" *-- "0..1" Inventario : describe >
+  Inventario "1" *-- "0..*" AplicacionInstalada : contiene >
+  Equipo "1" *-- "0..1" EstadoActualizacionSO : informa >
+  Equipo "1" -right- "0..*" Alerta : presenta >
+  ConfiguracionUmbrales "1" *-- "5" Umbral : define >
+  Alerta -[hidden]down- ConfiguracionUmbrales
+}
+
+class "Comando" as ComandoRef <<ref>>
+ComandoRef "0..*" -up- "1" Equipo : recibe >
+@enduml

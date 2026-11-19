@@ -1,34 +1,12 @@
 @startuml clases_aplicacion_l4
-' SentinelaTI - Diagrama de clases refinado: servicios de aplicación y contratos de persistencia (L4)
+' SentinelaTI - Diagrama de clases refinado: servicios de aplicación (L4)
+' Los contratos de persistencia se detallan en clases_persistencia_l4.puml
 ' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_aplicacion_l4.puml
-hide circle
-hide empty members
-skinparam dpi 150
-skinparam shadowing false
-skinparam defaultFontName Calibri
-skinparam defaultFontSize 11
-skinparam nodesep 22
-skinparam ranksep 55
-skinparam ArrowColor #333333
-skinparam ArrowFontSize 10
-skinparam class {
-  BackgroundColor #EAF4F5
-  BorderColor #1F6F78
-  FontColor #0B3C40
-  AttributeFontSize 10
-  BackgroundColor<<modificada>> #FFF1CC
-  BorderColor<<modificada>> #B7791F
-  BackgroundColor<<nueva>> #E3F2E1
-  BorderColor<<nueva>> #2F7D32
-}
-skinparam package {
-  BackgroundColor #FFFFFF
-  BorderColor #1F6F78
-  FontColor #1F6F78
-}
-
+!include estilo_clases_l4.iuml
+skinparam ranksep 60
 left to right direction
-title Diagrama de clases refinado (L4) — servicios de aplicación y contratos de persistencia
+
+title Servicios de aplicación refinados (L4) y sus dependencias
 
 package "Capa de aplicación" {
   class ServicioAutenticacion <<modificada>> {
@@ -37,13 +15,13 @@ package "Capa de aplicación" {
     + autorizar(s : Sesion, p : Permiso) : Boolean
   }
   class ServicioUsuarios <<nueva>> {
-    + crearUsuario(s : Sesion, nombre : String, correo : String, r : Rol) : Usuario
-    + editarUsuario(s : Sesion, id : UUID, nombre : String, r : Rol) : void
-    + desactivarUsuario(s : Sesion, id : UUID) : void
+    + crearUsuario(s, nombre, correo, r : Rol) : Usuario
+    + editarUsuario(s, id, nombre, r : Rol) : void
+    + desactivarUsuario(s, id : UUID) : void
     + listar(s : Sesion) : Usuario [0..*]
   }
   class ServicioConfiguracion <<nueva>> {
-    + definirUmbral(s : Sesion, m : Metrica, adv : Real, crit : Real) : void
+    + definirUmbral(s, m : Metrica, adv, crit : Real) : void
     + obtenerConfiguracion() : ConfiguracionUmbrales
   }
   class ServicioEnrolamiento <<modificada>> {
@@ -53,22 +31,22 @@ package "Capa de aplicación" {
     + autenticarAgente(token : String) : Equipo [0..1]
   }
   class ServicioRecepcionDatos <<nueva>> {
-    + recibirLectura(token : String, l : Lectura) : void
-    + recibirInventario(token : String, i : Inventario) : void
-    + recibirEstadoActualizaciones(token : String, e : EstadoActualizacionSO) : void
+    + recibirLectura(token, l : Lectura) : void
+    + recibirInventario(token, i : Inventario) : void
+    + recibirEstadoActualizaciones(token, e) : void
   }
   class ServicioDisponibilidad <<nueva>> {
     - intervalosTolerados : Integer = 3
     + detectarDesconectados() : Equipo [0..*]
   }
   class GestorAlertas <<modificada>> {
-    + evaluar(e : Equipo, l : Lectura, c : ConfiguracionUmbrales) : Alerta [0..*]
-    + evaluarMetrica(l : Lectura, m : Metrica, u : Umbral) : NivelAlerta
+    + evaluar(e : Equipo, l : Lectura, c) : Alerta [0..*]
+    + evaluarMetrica(l, m : Metrica, u : Umbral) : NivelAlerta
     + registrarDesconexion(e : Equipo) : Alerta
     + cerrarAlerta(a : Alerta) : void
   }
   class ServicioAcciones <<modificada>> {
-    + crearComando(s : Sesion, e : Equipo, t : TipoAccion, p : Map<String, String>) : Comando
+    + crearComando(s, e, t : TipoAccion, p) : Comando
     + comandosPendientes(token : String) : OrdenComando [0..*]
     + registrarResultado(id : UUID, r : ResultadoEjecucion) : void
     + cancelar(s : Sesion, id : UUID) : void
@@ -77,93 +55,39 @@ package "Capa de aplicación" {
   class BitacoraAuditoria <<modificada>> {
     + registrarOrden(c : Comando, u : Usuario) : EntradaBitacora
     + cerrarEntrada(c : Comando, e : EstadoComando) : void
-    + registrarIntentoDenegado(u : Usuario, t : TipoAccion) : EntradaBitacora
+    + registrarIntentoDenegado(u, t : TipoAccion) : EntradaBitacora
     + consultar(f : FiltroBitacora) : EntradaBitacora [0..*]
   }
 }
 
-package "Capa de dominio — contratos de persistencia" {
-  interface EquipoRepository <<nueva>> {
-    + obtenerPorId(id : UUID) : Equipo [0..1]
-    + buscarPorNumeroSerie(serie : String) : Equipo [0..1]
-    + buscarPorToken(token : String) : Equipo [0..1]
-    + listarConFiltros(estado : EstadoEquipo [0..1], texto : String [0..1]) : Equipo [0..*]
-    + contarPorEstado() : Map<EstadoEquipo, Integer>
-    + listarSinReporteDesde(limite : DateTime) : Equipo [0..*]
-    + guardar(e : Equipo) : void
-  }
-  interface LecturaRepository <<nueva>> {
-    + agregar(e : Equipo, l : Lectura) : void
-    + historial(e : Equipo, desde : DateTime, hasta : DateTime) : Lectura [0..*]
-  }
-  interface ComandoRepository <<nueva>> {
-    + guardar(c : Comando) : void
-    + obtenerPorId(id : UUID) : Comando [0..1]
-    + pendientesDe(e : Equipo) : Comando [0..*]
-    + vencidos(ahora : DateTime) : Comando [0..*]
-  }
-  interface UsuarioRepository <<nueva>> {
-    + obtenerPorCorreo(correo : String) : Usuario [0..1]
-    + obtenerPorId(id : UUID) : Usuario [0..1]
-    + listar() : Usuario [0..*]
-    + guardar(u : Usuario) : void
-  }
-  interface AlertaRepository <<nueva>> {
-    + abiertaDe(e : Equipo, m : Metrica [0..1]) : Alerta [0..1]
-    + guardar(a : Alerta) : void
-  }
-  interface ConfiguracionRepository <<nueva>> {
-    + obtener() : ConfiguracionUmbrales
-    + guardar(c : ConfiguracionUmbrales) : void
-  }
-  interface BitacoraRepository <<nueva>> {
-    + agregar(en : EntradaBitacora) : void
-    + cerrar(en : EntradaBitacora) : void
-    + buscar(f : FiltroBitacora) : EntradaBitacora [0..*]
-  }
+package "Contratos de persistencia (dominio)" {
+  interface UsuarioRepository <<nueva>>
+  interface ConfiguracionRepository <<nueva>>
+  interface EquipoRepository <<nueva>>
+  interface LecturaRepository <<nueva>>
+  interface AlertaRepository <<nueva>>
+  interface ComandoRepository <<nueva>>
+  interface BitacoraRepository <<nueva>>
 }
 
-package "Capa de infraestructura (PostgreSQL)" {
-  class EquipoRepositoryPg <<nueva>>
-  class LecturaRepositoryPg <<nueva>>
-  class ComandoRepositoryPg <<nueva>>
-  class UsuarioRepositoryPg <<nueva>>
-  class AlertaRepositoryPg <<nueva>>
-  class ConfiguracionRepositoryPg <<nueva>>
-  class BitacoraRepositoryPg <<nueva>>
-}
-
-EquipoRepositoryPg ..|> EquipoRepository
-LecturaRepositoryPg ..|> LecturaRepository
-ComandoRepositoryPg ..|> ComandoRepository
-UsuarioRepositoryPg ..|> UsuarioRepository
-AlertaRepositoryPg ..|> AlertaRepository
-ConfiguracionRepositoryPg ..|> ConfiguracionRepository
-BitacoraRepositoryPg ..|> BitacoraRepository
+ServicioUsuarios ..> ServicioAutenticacion
+ServicioConfiguracion ..> ServicioAutenticacion
+ServicioAcciones ..> ServicioAutenticacion
+ServicioRecepcionDatos ..> ServicioEnrolamiento : autenticarAgente
+ServicioAcciones ..> ServicioEnrolamiento : autenticarAgente
+ServicioRecepcionDatos ..> GestorAlertas : evaluar
+ServicioDisponibilidad ..> GestorAlertas : registrarDesconexion
+ServicioAcciones ..> BitacoraAuditoria
 
 ServicioAutenticacion ..> UsuarioRepository
-ServicioUsuarios ..> ServicioAutenticacion
 ServicioUsuarios ..> UsuarioRepository
-ServicioConfiguracion ..> ServicioAutenticacion
 ServicioConfiguracion ..> ConfiguracionRepository
-ServicioEnrolamiento ..> EquipoRepository
-ServicioRecepcionDatos ..> ServicioEnrolamiento : autenticarAgente
-ServicioRecepcionDatos ..> EquipoRepository
-ServicioRecepcionDatos ..> LecturaRepository
-ServicioRecepcionDatos ..> GestorAlertas : evaluar
-ServicioDisponibilidad ..> EquipoRepository
-ServicioDisponibilidad ..> GestorAlertas : registrarDesconexion
-GestorAlertas ..> AlertaRepository
 GestorAlertas ..> ConfiguracionRepository
-ServicioAcciones ..> ServicioAutenticacion
-ServicioAcciones ..> ServicioEnrolamiento : autenticarAgente
+ServicioEnrolamiento ..> EquipoRepository
+ServicioRecepcionDatos ..> EquipoRepository
+ServicioDisponibilidad ..> EquipoRepository
+ServicioRecepcionDatos ..> LecturaRepository
+GestorAlertas ..> AlertaRepository
 ServicioAcciones ..> ComandoRepository
-ServicioAcciones ..> BitacoraAuditoria
 BitacoraAuditoria ..> BitacoraRepository
-
-note bottom of BitacoraRepository
-  Sin operaciones de edición ni de borrado:
-  cerrar() solo completa una entrada abierta
-  (RF14, RNF12).
-end note
 @enduml

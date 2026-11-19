@@ -1,0 +1,33 @@
+@startuml secuencia_cu02_l4_sin_conexion
+' SentinelaTI - CU02 refinado (L4), parte 2: envío sin conexión y reenvío (excepción 2a, RNF04)
+' Render: java -jar plantuml.jar -tpng secuencia_cu02_l4_sin_conexion.puml
+!include estilo_secuencia_l4.iuml
+
+title CU02 refinado (L4) — parte 2: sin conexión y reenvío (excepción 2a, RNF04)
+
+participant "ag:AgenteSentinela" as AG
+participant ":RecolectorMetricas" as REC
+participant "q:ColaLocalLecturas" as COLA
+participant ":ClienteAPI" as CLI
+
+autonumber "<b>0"
+
+AG -> REC : componerLectura()
+REC --> AG : l : Lectura
+AG -> CLI : postLectura(l)
+CLI --> AG : error de red
+AG -> COLA : encolar(l)
+note right of COLA
+  Conserva al menos
+  72 h de lecturas.
+end note
+== Al recuperarse la conexión ==
+AG -> COLA : pendientes()
+COLA --> AG : lecturas en orden cronológico
+loop por cada lectura pendiente
+  AG -> CLI : postLectura(lPendiente)
+  note right of CLI : Sigue como en la parte 1.
+  CLI --> AG : confirmación
+  AG -> COLA : confirmarEnvio(lPendiente)
+end
+@enduml

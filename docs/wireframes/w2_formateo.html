@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>W2 Detalle y confirmación de formateo</title><link rel="stylesheet" href="wf.css"></head>
+<body>
+<div class="frame">
+  <div class="top"><span class="logo">SentinelaTI</span><span class="user">Felipe C. <span class="rol">Administrador</span> &nbsp;▾ &nbsp; Cerrar sesión</span></div>
+  <div class="body">
+    <div class="nav">
+      <div class="act">▣ Parque</div>
+      <div>⚠ Alertas <span class="badge">7</span></div>
+      <div>⟳ Acciones</div>
+      <div>☰ Bitácora</div>
+      <div class="sep"></div>
+      <div>⚙ Umbrales</div>
+      <div>👤 Usuarios</div>
+    </div>
+    <div class="main">
+      <div class="crumb">Parque › PC-OPS-022</div>
+      <h1>PC-OPS-022 &nbsp;<span class="st crit">▲ Crítico</span></h1>
+      <div class="sub">Último usuario: jperez · IP 10.0.1.42 · Último reporte: hace 2 min</div>
+      <div class="filters"><div class="btn">Reiniciar</div><div class="btn">Apagar</div><div class="btn">Instalar aplicación</div><div class="btn">Actualizar SO (simulado)</div><div class="btn">Escritorio remoto (simulado)</div><div class="btn danger">Formatear…</div></div>
+      <div class="grid2">
+        <div class="box"><b>CPU %</b> · 24 h | 7 días | 30 días<div class="chart"></div></div>
+        <div class="box"><b>RAM %</b><div class="chart"></div></div>
+        <div class="box"><b>Inventario</b><br>Modelo, nº de serie, aplicaciones instaladas…</div>
+        <div class="box"><b>Órdenes recientes</b><br>Reinicio · Ejecutado · 18-11 10:02</div>
+      </div>
+    </div>
+  </div>
+  <div class="overlay"></div>
+  <div class="modal">
+    <h2>Formatear PC-OPS-022</h2>
+    <div class="warn"><b>Esta acción borra todo el contenido del equipo y no se puede deshacer.</b><br>En esta versión del prototipo la ejecución es simulada.</div>
+    Qué ocurrirá:
+    <ul class="li">
+      <li>La orden queda <b>Pendiente</b> hasta que el equipo la reciba; mientras tanto puede cancelarla desde «Acciones».</li>
+      <li>El usuario del equipo verá un aviso con cuenta regresiva de 5 minutos y podrá posponerlo una vez por 30 minutos.</li>
+      <li>La orden queda registrada en la bitácora con su nombre.</li>
+    </ul>
+    <div style="margin-top:10px">Para confirmar, escriba el nombre del equipo:</div>
+    <div class="input" style="margin-top:6px;color:#222">PC-OPS-02<span style="border-left:1px solid #222">&nbsp;</span></div>
+    <div style="color:#8a1c1c;font-size:12px;margin-top:4px">El nombre no coincide todavía.</div>
+    <div class="row"><div class="btn pri">Cancelar</div><div class="btn dis">Formatear equipo</div></div>
+  </div>
+  <div class="ann" style="left:330px;top:560px"><b>1</b>«Cancelar» es la opción por defecto; «Formatear» se habilita solo con el nombre exacto (RF11). La acción destructiva tiene un estilo distinto.</div>
+  <div class="ann" style="left:600px;top:560px"><b>2</b>Mismo encabezado, menú y etiquetas de estado que la vista Parque.</div>
+  <div class="ann" style="left:870px;top:560px"><b>3</b>La orden se puede cancelar mientras siga Pendiente.</div>
+</div>
+</body></html>

@@ -1,0 +1,106 @@
+@startuml secuencia_cu07_l4
+' SentinelaTI - Diagrama de secuencia CU07 "Ejecutar acción remota" refinado (L4)
+' Render: java -jar plantuml.jar -tpng secuencia_cu07_l4.puml
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 12
+skinparam ArrowColor #333333
+skinparam maxMessageSize 220
+skinparam sequence {
+  ParticipantBackgroundColor #EAF4F5
+  ParticipantBorderColor #1F6F78
+  ActorBackgroundColor #EAF4F5
+  ActorBorderColor #1F6F78
+  LifeLineBorderColor #1F6F78
+  BoxBackgroundColor #FBFBFB
+  BoxBorderColor #1F6F78
+  GroupBackgroundColor #EAF4F5
+  GroupBorderColor #1F6F78
+}
+
+title CU07 — Ejecutar acción remota (refinado L4: autorización por permiso, repositorios y OrdenComando)
+
+actor "Técnico de TI" as TEC
+box "Panel web (React)" #FFFFFF
+  boundary ":VistaDetalleEquipo" as WEB
+end box
+box "Servidor (API REST)" #FFFFFF
+  control ":ServicioAcciones" as SA
+  control ":ServicioAutenticacion" as AUT
+  control ":BitacoraAuditoria" as BIT
+  entity "c:ComandoReinicioApagado" as CMD
+  entity ":ComandoRepository" as CR
+  entity ":BitacoraRepository" as BR
+end box
+box "Equipo cliente" #FFFFFF
+  participant "ag:AgenteSentinela" as AG
+  participant ":EjecutorReinicioApagado" as EJ
+  boundary ":NotificadorUsuario" as NOT
+end box
+
+autonumber "<b>0"
+
+TEC -> WEB : Acciones > Reiniciar > confirmar
+activate WEB
+WEB -> SA : crearComando(s, e, ReiniciarApagar, p)
+activate SA
+SA -> AUT : autorizar(s, OrdenarAccion)
+note right of AUT : El permiso sale de\nTipoAccion → Permiso\n(Tabla 5 del ERS, RNF07).
+AUT --> SA : permitido : Boolean
+
+alt sin permiso (excepción 1f)
+  SA -> BIT : registrarIntentoDenegado(u, t)
+  SA --> WEB : HTTP 403
+else autorizado
+  SA -> CMD : <<create>> ComandoReinicioApagado(e, Reiniciar)
+  SA -> BIT : registrarOrden(c, u)
+  activate BIT
+  BIT -> BR : agregar(entrada)
+  alt falla la escritura (excepción 2a de CU09)
+    BR --> BIT : error de persistencia
+    BIT --> SA : error
+    SA --> WEB : HTTP 500 — no hay acción sin registro (RNF12)
+  else registro correcto
+    BIT --> SA : entrada abierta
+    deactivate BIT
+    SA -> CR : guardar(c)
+    SA --> WEB : c (Pendiente)
+    deactivate SA
+
+    == Entrega al agente (sondeo saliente cada 60 s) ==
+    AG -> SA : comandosPendientes(token)
+    activate SA
+    SA -> CR : pendientesDe(e)
+    CR --> SA : [c]
+    SA -> CMD : marcarEntregado()
+    SA -> CMD : aOrden()
+    CMD --> SA : o : OrdenComando
+    SA -> CR : guardar(c)
+    SA --> AG : [o]
+    deactivate SA
+
+    == Ejecución en el equipo (el agente solo conoce OrdenComando) ==
+    activate AG
+    AG -> AG : seleccionarEjecutor(o.tipo)
+    opt o.interrumpeUso (<<include>> CU08, RF15)
+      AG -> NOT : mostrarAviso(o)
+      NOT --> AG : desenlace : DesenlaceAviso
+    end
+    AG -> EJ : ejecutar(o)
+    EJ --> AG : r : ResultadoEjecucion
+    AG -> SA : registrarResultado(o.idComando, r)
+    deactivate AG
+    activate SA
+    SA -> CR : obtenerPorId(id)
+    SA -> CMD : registrarResultado(r)
+    SA -> CR : guardar(c)
+    SA -> BIT : cerrarEntrada(c, r.estado)
+    BIT -> BR : cerrar(entrada)
+    SA --> WEB : estado final del comando
+    deactivate SA
+  end
+end
+WEB --> TEC : resultado de la acción
+deactivate WEB
+@enduml

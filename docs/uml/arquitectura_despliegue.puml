@@ -1,0 +1,67 @@
+@startuml arquitectura_despliegue
+' SentinelaTI - Vista física: diagrama de despliegue (L4)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng arquitectura_despliegue.puml
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #0B3C40
+}
+skinparam artifact {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+skinparam database {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+left to right direction
+
+title Vista de despliegue de SentinelaTI
+
+node "Estación de trabajo\n<<device>> PC Windows 10 22H2 / 11 (64 bits)\n[1..200]" as PC {
+  node "<<execution environment>>\nAdministrador de servicios de Windows" as SCM {
+    artifact "sentinela-agente.exe\n(Python 3.12 empaquetado)" as AGEXE
+  }
+  artifact "cola_local.sqlite\n(≥ 72 h de lecturas)" as COLA
+  artifact "token.dat\n(protegido con DPAPI)" as TOK
+  artifact "icono de bandeja\n(RNF11)" as ICO
+}
+
+node "Equipo del operador\n<<device>> PC del técnico o administrador" as OP {
+  node "<<execution environment>>\nNavegador (Chrome · Edge · Firefox)" as NAV {
+    artifact "panel-sentinela\n(bundle React)" as BUNDLE
+  }
+}
+
+node "Servidor de aplicación\n<<device>> VM Linux" as APP {
+  node "<<execution environment>>\nProxy inverso HTTPS (TLS 1.2+)" as PROXY {
+    artifact "panel estático\n(build React)" as STATIC
+  }
+  node "<<execution environment>>\nUvicorn · Python 3.12" as UVI {
+    artifact "api-sentinela\n(FastAPI)" as API
+  }
+}
+
+node "Servidor de datos\n<<device>> VM Linux" as DBN {
+  database "PostgreSQL 16\nesquema sentinela" as PG
+}
+
+AGEXE --> PROXY : HTTPS :443 (saliente)\nPOST lecturas c/5 min\nGET comandos c/60 s
+NAV --> PROXY : HTTPS :443
+PROXY --> UVI : HTTP local\n(127.0.0.1:8000)
+UVI --> PG : TCP :5432\n(red interna)
+
+note bottom of DBN
+  En el prototipo del L5 los dos servidores
+  pueden ser la misma VM; la separación
+  lógica se mantiene.
+end note
+@enduml

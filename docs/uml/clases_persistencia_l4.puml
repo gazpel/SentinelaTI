@@ -11,7 +11,7 @@ package "Capa de dominio — contratos" {
     + obtenerPorId(id : UUID) : Equipo [0..1]
     + buscarPorNumeroSerie(serie : String) : Equipo [0..1]
     + buscarPorToken(token : String) : Equipo [0..1]
-    + listarConFiltros(estado [0..1], texto [0..1]) : Equipo [0..*]
+    + listarConFiltros(estado [0..1], texto [0..1], pagina, tamano) : Equipo [0..*] {ordered}
     + contarPorEstado() : Map<EstadoEquipo, Integer>
     + listarSinReporteDesde(limite : DateTime) : Equipo [0..*]
     + guardar(e : Equipo) : void
@@ -34,6 +34,8 @@ package "Capa de dominio — contratos" {
   }
   interface AlertaRepository <<nueva>> {
     + abiertaDe(e : Equipo, m : Metrica [0..1]) : Alerta [0..1]
+    + listarAbiertas(pagina, tamano : Integer) : Alerta [0..*] {ordered}
+    + contarAbiertas() : Integer
     + guardar(a : Alerta) : void
   }
   interface ConfiguracionRepository <<nueva>> {
@@ -64,6 +66,12 @@ UsuarioRepository <|.. UsuarioRepositoryPg
 AlertaRepository <|.. AlertaRepositoryPg
 ConfiguracionRepository <|.. ConfiguracionRepositoryPg
 BitacoraRepository <|.. BitacoraRepositoryPg
+
+note top of EquipoRepository
+  {ordered}: listarConFiltros() devuelve los equipos
+  por severidad (Crítico, Advertencia, Desconectado,
+  Normal) y paginados (RNF06, RNF08).
+end note
 
 note bottom of BitacoraRepository
   Sin operaciones de edición ni de borrado:

@@ -44,6 +44,8 @@ package "Capa de aplicación" {
     + evaluarMetrica(l, m : Metrica, u : Umbral) : NivelAlerta
     + registrarDesconexion(e : Equipo) : Alerta
     + cerrarAlerta(a : Alerta) : void
+    + consultarAbiertas(s, pagina, tamano) : Alerta [0..*]
+    + contarAbiertas(s : Sesion) : Integer
   }
   class ServicioAcciones <<modificada>> {
     + crearComando(s, e, t : TipoAccion, p) : Comando
@@ -73,6 +75,7 @@ package "Contratos de persistencia (dominio)" {
 ServicioUsuarios ..> ServicioAutenticacion
 ServicioConfiguracion ..> ServicioAutenticacion
 ServicioAcciones ..> ServicioAutenticacion
+GestorAlertas .[norank].> ServicioAutenticacion
 ServicioRecepcionDatos ..> ServicioEnrolamiento : autenticarAgente
 ServicioAcciones ..> ServicioEnrolamiento : autenticarAgente
 ServicioRecepcionDatos ..> GestorAlertas : evaluar

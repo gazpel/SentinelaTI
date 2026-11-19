@@ -8,8 +8,8 @@ title Dominio refinado (L4) — monitoreo del parque
 package "Monitoreo del parque" {
   class ParqueComputacional <<modificada>> {
     - nombre : String
-    + listar(estado : EstadoEquipo [0..1]) : Equipo [0..*]
-    + buscar(texto : String) : Equipo [0..*]
+    + listar(estado : EstadoEquipo [0..1], pagina, tamano : Integer) : Equipo [0..*] {ordered}
+    + buscar(texto : String, pagina, tamano : Integer) : Equipo [0..*] {ordered}
     + resumenPorEstado() : Map<EstadoEquipo, Integer>
   }
   class Equipo {

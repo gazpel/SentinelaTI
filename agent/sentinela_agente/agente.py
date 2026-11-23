@@ -66,8 +66,9 @@ class AgenteSentinela:
         datos = self.inventario.leer_hardware()
         token, intervalo_servidor = self.cliente.post_enrolamiento(codigo, datos)
         self.almacen.guardar(token)
-        self.intervalo_reporte_seg = intervalo_servidor * 60
-        log.info("Equipo %s enrolado. Reporta cada %d min.", datos.nombre, intervalo_servidor)
+        if not self.cfg.intervalo_explicito:
+            self.intervalo_reporte_seg = intervalo_servidor * 60
+        log.info("Equipo %s enrolado. Reporta cada %g min.", datos.nombre, self.intervalo_reporte_seg / 60)
         return True
 
     # ---- reporte de métricas (CU02, RF02, RNF04) -------------------------------

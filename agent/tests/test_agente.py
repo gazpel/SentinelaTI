@@ -179,3 +179,25 @@ def test_cliente_convierte_errores_de_transporte(servidor):
     cliente = ClienteAPI("http://servidor", "tok-1", transporte=httpx.MockTransport(servidor))
     with pytest.raises(ErrorRed):
         cliente.get_comandos_pendientes()
+
+
+# --------------------------------------------------------------------------- hallazgos de la prueba del prototipo
+@pytest.mark.parametrize("serie, valida", [
+    ("PF3ABCDE", True), ("System Serial Number", False), ("To Be Filled By O.E.M.", False),
+    ("Default string", False), ("  0 ", False), (None, False), ("", False),
+])
+def test_series_genericas_de_fabrica_no_identifican_al_equipo(serie, valida):
+    """Una serie genérica haría que equipos distintos se fusionen en uno al enrolarse (RF01)."""
+    from sentinela_agente.recolectores import es_serie_valida
+    assert es_serie_valida(serie) is valida
+
+
+@pytest.mark.parametrize("explicito, esperado_seg", [(False, 300), (True, 60)])
+def test_intervalo_configurado_prevalece_sobre_el_del_servidor(tmp_path, servidor, explicito, esperado_seg):
+    cfg = ConfiguracionAgente(url_servidor="http://servidor", codigo_enrolamiento="COD", carpeta_datos=tmp_path,
+                              intervalo_reporte_min=1, intervalo_explicito=explicito, segundos_aviso=0)
+    a = AgenteSentinela(cfg, cliente=ClienteAPI(cfg.url_servidor, transporte=httpx.MockTransport(servidor)),
+                        recolector=RecolectorFalso(), inventario=InventarioFalso(), notificador=NotificadorUsuario(0))
+    a.enrolar("COD")
+    assert a.intervalo_reporte_seg == esperado_seg
+    a.cola.cerrar()

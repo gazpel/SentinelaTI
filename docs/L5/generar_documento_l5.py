@@ -267,7 +267,7 @@ tabla("Carpetas del repositorio y componente del L4 al que corresponden.", ["Car
     ["`backend/tests`", "106 pruebas automatizadas de la API y del dominio (pytest).", "—"],
     ["`backend/scripts`", "`sembrar_demo.py`: 20 equipos ficticios con 30 días de historial.", "—"],
     ["`agent/sentinela_agente`", "Agente: recolectores, cola local, cliente HTTP, ejecutores y notificador.", "Agente SentinelaTI"],
-    ["`agent/tests`", "19 pruebas del agente con la API simulada.", "—"],
+    ["`agent/tests`", "28 pruebas del agente con la API simulada.", "—"],
     ["`frontend/src`", "Panel React: vistas, componentes comunes, cliente de la API y sesión.", "Panel web (React)"],
     ["`docs/L5`", "Este documento y las capturas de la interfaz.", "—"],
 ], [4.3, 7.2, 4.5])
@@ -538,11 +538,16 @@ tabla("Valores límite de las reglas temporales.", ["Regla", "Justo en el límit
 h(2, "6.4 Resultados de la ejecución")
 tabla("Resultado de las pruebas automatizadas (23-11-2026).", ["Suite", "Comando", "Pruebas", "Resultado"], [
     ["API y dominio", "`cd backend && python -m pytest`", "106", "106 aprobadas"],
-    ["Agente", "`cd agent && python -m pytest`", "19", "19 aprobadas"],
+    ["Agente", "`cd agent && python -m pytest`", "28", "28 aprobadas"],
     ["Panel (recorrido)", "Recorrido automatizado con Edge sin interfaz", "11 pantallas", "Sin errores en la consola; el Técnico no ve «Formatear»; el botón de formateo sigue deshabilitado con un nombre incompleto."],
 ], [3.0, 5.6, 2.2, 5.2])
 par("Para comprobar que las pruebas detectan errores reales, se introdujeron dos fallos a propósito y luego se revirtieron: cambiar `>` por `>=` en `Umbral.evaluar()` hizo fallar CP-21 y la prueba unitaria del umbral, y quitar el registro del intento denegado hizo fallar CP-26.")
-par("Además se verificó el flujo completo con el agente real en el equipo de desarrollo (modo seguro): enrolamiento, lectura con psutil, orden de reinicio desde la API, aviso con cuenta regresiva, ejecución y cierre de la entrada de bitácora como «Ejecutado».")
+par("Además se probó el flujo completo con el agente real en el equipo de desarrollo (modo seguro): el equipo se enroló y apareció en el parque, un Técnico ordenó el reinicio desde el panel, el agente lo recibió en su sondeo, mostró el aviso y la bitácora cerró la entrada como «Ejecutado». También se comprobó que un Técnico que abre la dirección de una vista de Administrador vuelve al parque y que la API le responde 403.")
+par("Esta prueba encontró dos defectos que las pruebas automatizadas no cubrían; ambos se corrigieron y ahora tienen su prueba:")
+vinetas([
+    "**Número de serie genérico.** La placa del equipo de desarrollo informa «System Serial Number». Como el servidor identifica al equipo por su serie, dos equipos con ese valor de fábrica se habrían fusionado en un solo registro. Ahora el agente descarta las series genéricas y usa el UUID del sistema (`es_serie_valida()`).",
+    "**Intervalo de reporte ignorado.** Al enrolarse, el intervalo que sugiere el servidor reemplazaba al configurado en el equipo con `--intervalo`. Ahora prevalece el configurado.",
+])
 h(2, "6.5 Pruebas pendientes para el L6")
 tabla("Pruebas planificadas para el plan completo del L6.", ["Prueba", "Requerimiento", "Tipo", "Entorno"], [
     ["Reinicio real ejecutado en ≤ 2 min, con `SENTINELA_ACCIONES_REALES=1`", "RF08", "Sistema, manual", "VM Windows 10 y 11"],

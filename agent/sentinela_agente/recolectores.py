@@ -73,10 +73,28 @@ class RecolectorInventario:
 
     @staticmethod
     def _numero_serie() -> str:
+        """El número de serie identifica al equipo en el servidor (un reenrolamiento con la misma serie
+        reutiliza el registro). Muchas placas y VMs traen un valor genérico de fábrica: si se usara tal
+        cual, equipos distintos se fusionarían en uno solo. En ese caso se usa el UUID del sistema."""
         serie = _powershell("(Get-CimInstance Win32_BIOS).SerialNumber")
-        if not serie or serie.lower() in ("0", "default string", "to be filled by o.e.m."):
-            serie = f"SIN-SERIE-{socket.gethostname()}"  # VMs sin número de serie en la BIOS
-        return serie
+        if es_serie_valida(serie):
+            return serie
+        uuid = _powershell("(Get-CimInstance Win32_ComputerSystemProduct).UUID")
+        if es_serie_valida(uuid):
+            return f"UUID-{uuid}"
+        return f"SIN-SERIE-{socket.gethostname()}"
+
+
+SERIES_GENERICAS = {
+    "", "0", "none", "n/a", "na", "default string", "to be filled by o.e.m.", "system serial number",
+    "not specified", "not applicable", "chassis serial number", "serial number", "123456789", "0123456789",
+    "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "03000200-0400-0500-0006-000700080009",
+}
+
+
+def es_serie_valida(serie: str | None) -> bool:
+    return bool(serie) and serie.strip().lower() not in SERIES_GENERICAS
 
     @staticmethod
     def _ip_local() -> str | None:

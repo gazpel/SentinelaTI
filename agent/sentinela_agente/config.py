@@ -26,6 +26,8 @@ class ConfiguracionAgente:
     url_servidor: str = field(default_factory=lambda: os.getenv("SENTINELA_SERVIDOR", "http://localhost:8000"))
     codigo_enrolamiento: str = field(default_factory=lambda: os.getenv("SENTINELA_CODIGO_ENROLAMIENTO", ""))
     intervalo_reporte_min: int = 5
+    # Si el intervalo se configuró explícitamente en el equipo, prevalece sobre el que sugiere el servidor.
+    intervalo_explicito: bool = False
     intervalo_comandos_seg: int = 60  # sondeo de órdenes (D2)
     carpeta_datos: Path = field(default_factory=lambda: Path(os.getenv(
         "SENTINELA_DATOS", Path(os.getenv("PROGRAMDATA", Path.home())) / "SentinelaTI")))

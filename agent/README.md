@@ -40,7 +40,7 @@ $env:SENTINELA_ACCIONES_REALES = "1"
 ..\.venv\Scripts\python -m pytest
 ```
 
-19 pruebas; la API se simula con `httpx.MockTransport`, así que no hace falta el servidor.
+28 pruebas; la API se simula con `httpx.MockTransport`, así que no hace falta el servidor.
 
 ## Pendiente (L6)
 

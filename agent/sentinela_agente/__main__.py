@@ -14,7 +14,7 @@ def main() -> None:
     p = argparse.ArgumentParser(prog="sentinela_agente", description="Agente de monitoreo SentinelaTI")
     p.add_argument("--servidor", help="URL de la API (por defecto SENTINELA_SERVIDOR o http://localhost:8000)")
     p.add_argument("--codigo", help="Código de enrolamiento de la organización")
-    p.add_argument("--intervalo", type=int, default=5, help="Minutos entre lecturas (1 a 60, RF02)")
+    p.add_argument("--intervalo", type=int, help="Minutos entre lecturas (1 a 60, RF02); por defecto, el que indique el servidor")
     p.add_argument("--sondeo", type=int, default=60, help="Segundos entre consultas de órdenes")
     p.add_argument("--aviso", type=int, default=300, help="Segundos de aviso antes de reiniciar (RF15)")
     p.add_argument("--datos", type=Path, help="Carpeta de datos del agente (token y cola local)")
@@ -23,7 +23,8 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
-        cfg = ConfiguracionAgente(intervalo_reporte_min=a.intervalo, intervalo_comandos_seg=a.sondeo,
+        cfg = ConfiguracionAgente(intervalo_reporte_min=5 if a.intervalo is None else a.intervalo, intervalo_explicito=a.intervalo is not None,
+                                  intervalo_comandos_seg=a.sondeo,
                                   segundos_aviso=a.aviso)
     except ConfiguracionInvalida as error:
         p.error(str(error))

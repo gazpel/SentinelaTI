@@ -15,9 +15,9 @@ Proyecto semestral — Fundamentos de Ingeniería de Software (USACH, 2026-2).
 ## Entregas
 
 - [x] L1 — Definición del proyecto y planificación inicial (`docs/L1/`)
-- [ ] L2 — Requerimientos
-- [ ] L3 — Modelado UML
-- [ ] L4 — Arquitectura y diseño
+- [x] L2 — Requerimientos
+- [x] L3 — Modelado UML
+- [x] L4 — Arquitectura y diseño
 - [ ] L5 — Prototipo e interfaz
 - [ ] L6 — Pruebas y documentación
 - [ ] L7 — Presentación final

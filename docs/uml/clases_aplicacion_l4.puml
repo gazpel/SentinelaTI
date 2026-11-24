@@ -1,0 +1,96 @@
+@startuml clases_aplicacion_l4
+' SentinelaTI - Diagrama de clases refinado: servicios de aplicación (L4)
+' Los contratos de persistencia se detallan en clases_persistencia_l4.puml
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_aplicacion_l4.puml
+!include estilo_clases_l4.iuml
+skinparam ranksep 60
+left to right direction
+
+title Servicios de aplicación refinados (L4) y sus dependencias
+
+package "Capa de aplicación" {
+  class ServicioAutenticacion <<modificada>> {
+    + iniciarSesion(correo : String, clave : String) : Sesion
+    + validarSesion(jwt : String) : Sesion
+    + autorizar(s : Sesion, p : Permiso) : Boolean
+  }
+  class ServicioUsuarios <<nueva>> {
+    + crearUsuario(s, nombre, correo, r : Rol) : Usuario
+    + editarUsuario(s, id, nombre, r : Rol) : void
+    + desactivarUsuario(s, id : UUID) : void
+    + listar(s : Sesion) : Usuario [0..*]
+  }
+  class ServicioConfiguracion <<nueva>> {
+    + definirUmbral(s, m : Metrica, adv, crit : Real) : void
+    + obtenerConfiguracion() : ConfiguracionUmbrales
+  }
+  class ServicioEnrolamiento <<modificada>> {
+    + enrolar(codigo : String, datos : DatosEquipo) : TokenAgente
+    + validarCodigo(codigo : String) : Boolean
+    + buscarPorNumeroSerie(serie : String) : Equipo [0..1]
+    + autenticarAgente(token : String) : Equipo [0..1]
+  }
+  class ServicioRecepcionDatos <<nueva>> {
+    + recibirLectura(token, l : Lectura) : void
+    + recibirInventario(token, i : Inventario) : void
+    + recibirEstadoActualizaciones(token, e) : void
+  }
+  class ServicioDisponibilidad <<nueva>> {
+    - intervalosTolerados : Integer = 3
+    + detectarDesconectados() : Equipo [0..*]
+  }
+  class GestorAlertas <<modificada>> {
+    + evaluar(e : Equipo, l : Lectura, c) : Alerta [0..*]
+    + evaluarMetrica(l, m : Metrica, u : Umbral) : NivelAlerta
+    + registrarDesconexion(e : Equipo) : Alerta
+    + cerrarAlerta(a : Alerta) : void
+    + consultarAbiertas(s, pagina, tamano) : Alerta [0..*]
+    + contarAbiertas(s : Sesion) : Integer
+  }
+  class ServicioAcciones <<modificada>> {
+    + crearComando(s, e, t : TipoAccion, p) : Comando
+    + comandosPendientes(token : String) : OrdenComando [0..*]
+    + registrarResultado(id : UUID, r : ResultadoEjecucion) : void
+    + cancelar(s : Sesion, id : UUID) : void
+    + expirarVencidos() : void
+  }
+  class BitacoraAuditoria <<modificada>> {
+    + registrarOrden(c : Comando, u : Usuario) : EntradaBitacora
+    + cerrarEntrada(c : Comando, e : EstadoComando) : void
+    + registrarIntentoDenegado(u, t : TipoAccion) : EntradaBitacora
+    + consultar(f : FiltroBitacora) : EntradaBitacora [0..*]
+  }
+}
+
+package "Contratos de persistencia (dominio)" {
+  interface UsuarioRepository <<nueva>>
+  interface ConfiguracionRepository <<nueva>>
+  interface EquipoRepository <<nueva>>
+  interface LecturaRepository <<nueva>>
+  interface AlertaRepository <<nueva>>
+  interface ComandoRepository <<nueva>>
+  interface BitacoraRepository <<nueva>>
+}
+
+ServicioUsuarios ..> ServicioAutenticacion
+ServicioConfiguracion ..> ServicioAutenticacion
+ServicioAcciones ..> ServicioAutenticacion
+GestorAlertas .[norank].> ServicioAutenticacion
+ServicioRecepcionDatos ..> ServicioEnrolamiento : autenticarAgente
+ServicioAcciones ..> ServicioEnrolamiento : autenticarAgente
+ServicioRecepcionDatos ..> GestorAlertas : evaluar
+ServicioDisponibilidad ..> GestorAlertas : registrarDesconexion
+ServicioAcciones ..> BitacoraAuditoria
+
+ServicioAutenticacion ..> UsuarioRepository
+ServicioUsuarios ..> UsuarioRepository
+ServicioConfiguracion ..> ConfiguracionRepository
+GestorAlertas ..> ConfiguracionRepository
+ServicioEnrolamiento ..> EquipoRepository
+ServicioRecepcionDatos ..> EquipoRepository
+ServicioDisponibilidad ..> EquipoRepository
+ServicioRecepcionDatos ..> LecturaRepository
+GestorAlertas ..> AlertaRepository
+ServicioAcciones ..> ComandoRepository
+BitacoraAuditoria ..> BitacoraRepository
+@enduml

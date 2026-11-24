@@ -1,0 +1,34 @@
+' Estilo común de los diagramas de clases del L4 (se incluye con !include)
+hide circle
+hide empty members
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam nodesep 25
+skinparam ranksep 40
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam class {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+  AttributeFontSize 10
+  BackgroundColor<<modificada>> #FFF1CC
+  BorderColor<<modificada>> #B7791F
+  BackgroundColor<<nueva>> #E3F2E1
+  BorderColor<<nueva>> #2F7D32
+  BackgroundColor<<L3>> #F6E3E3
+  BorderColor<<L3>> #A33A3A
+  BackgroundColor<<ref>> #FFFFFF
+  BorderColor<<ref>> #888888
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}

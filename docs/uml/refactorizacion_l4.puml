@@ -1,0 +1,105 @@
+@startuml refactorizacion_l4
+' SentinelaTI - Cambios de diseño L3 -> L4 (antes / después)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng refactorizacion_l4.puml
+hide circle
+hide empty members
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam nodesep 30
+skinparam ranksep 35
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam class {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+  AttributeFontSize 10
+  BackgroundColor<<L3>> #F6E3E3
+  BorderColor<<L3>> #A33A3A
+  BackgroundColor<<nueva>> #E3F2E1
+  BorderColor<<nueva>> #2F7D32
+  BackgroundColor<<modificada>> #FFF1CC
+  BorderColor<<modificada>> #B7791F
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}
+
+title Cambios de diseño del L3 al L4 (antes → después)
+
+package "C1 · Clase dividida" {
+  class "ServicioMonitoreo" as SM <<L3>> {
+    + recibirLectura(token, l) : void
+    + recibirInventario(token, i) : void
+    + recibirEstadoActualizaciones(token, e) : void
+    + detectarDesconectados() : Equipo [0..*]
+  }
+  class "ServicioRecepcionDatos" as SRD <<nueva>> {
+    + recibirLectura(token, l) : void
+    + recibirInventario(token, i) : void
+    + recibirEstadoActualizaciones(token, e) : void
+  }
+  class "ServicioDisponibilidad" as SD <<nueva>> {
+    - intervalosTolerados : Integer = 3
+    + detectarDesconectados() : Equipo [0..*]
+  }
+  SM .down.> SRD : se divide en
+  SM .down.> SD : se divide en
+}
+
+package "C2 · Responsabilidad reasignada (servidor → agente)" {
+  class "Comando (L3)" as C3 <<L3>> {
+    + {abstract} ejecutarEnAgente() : ResultadoEjecucion
+  }
+  class "Comando (L4)" as C4 <<modificada>> {
+    + aOrden() : OrdenComando
+  }
+  class "OrdenComando" as OC <<nueva>>
+  class "EjecutorAccion" as EA <<modificada>> {
+    + ejecutar(o : OrdenComando) : ResultadoEjecucion
+  }
+  C3 .down.> C4 : pierde la ejecución
+  C4 ..> OC : <<create>>
+  EA ..> OC
+}
+
+package "C3 · Responsabilidad reasignada (entidad → servicios)" {
+  class "Administrador (L3)" as AD3 <<L3>> {
+    + definirUmbral(m, adv, crit) : void
+    + crearUsuario(nombre, correo, r) : Usuario
+    + puedeEjecutar(a : TipoAccion) : Boolean
+  }
+  class "Administrador (L4)" as AD4 <<modificada>> {
+    + tienePermiso(p : Permiso) : Boolean
+  }
+  class "ServicioConfiguracion" as SC <<nueva>> {
+    + definirUmbral(s, m, adv, crit) : void
+  }
+  class "ServicioUsuarios" as SU <<nueva>> {
+    + crearUsuario(s, nombre, correo, r) : Usuario
+    + editarUsuario(s, id, nombre, r) : void
+    + desactivarUsuario(s, id) : void
+  }
+  AD3 .down.> AD4
+  AD3 .down.> SC : definirUmbral()
+  AD3 .down.> SU : crearUsuario()
+}
+
+package "C4 · Persistencia detrás de contratos" {
+  class "ServicioAcciones (L3)" as SA3 <<L3>>
+  class "ServicioAcciones (L4)" as SA4 <<modificada>>
+  interface "ComandoRepository" as CR <<nueva>>
+  class "ComandoRepositoryPg" as CRP <<nueva>>
+  SA3 .down.> SA4 : deja de usar SQL directo
+  SA4 ..> CR
+  CRP .up.|> CR
+}
+
+' Distribución en cuadrícula 2 x 2: C1 sobre C3 y C2 sobre C4
+SRD -[hidden]down- AD3
+OC -[hidden]down- SA3
+@enduml

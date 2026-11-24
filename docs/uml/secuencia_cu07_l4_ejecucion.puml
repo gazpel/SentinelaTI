@@ -1,0 +1,53 @@
+@startuml secuencia_cu07_l4_ejecucion
+' SentinelaTI - CU07 "Ejecutar acción remota" refinado (L4), parte 2: entrega y ejecución en el equipo
+' Render: java -jar plantuml.jar -tpng secuencia_cu07_l4_ejecucion.puml
+!include estilo_secuencia_l4.iuml
+
+title CU07 refinado (L4) — parte 2: entrega y ejecución en el equipo
+
+box "Servidor (API REST)" #FFFFFF
+  control ":Servicio\nAcciones" as SA
+  entity "c:ComandoReinicio\nApagado" as CMD
+  entity ":Comando\nRepository" as CR
+  control ":Bitacora\nAuditoria" as BIT
+  entity ":Bitacora\nRepository" as BR
+end box
+box "Equipo cliente" #FFFFFF
+  participant "ag:Agente\nSentinela" as AG
+  participant ":EjecutorReinicio\nApagado" as EJ
+  boundary ":Notificador\nUsuario" as NOT
+end box
+
+autonumber "<b>0"
+
+note over SA, BR : Precondición: c está Pendiente y su entrada de bitácora está abierta (parte 1).
+
+AG -> SA : comandosPendientes(token)
+activate SA
+SA -> CR : pendientesDe(e)
+CR --> SA : [c]
+SA -> CMD : marcarEntregado()
+SA -> CMD : aOrden()
+CMD --> SA : o : OrdenComando
+SA -> CR : guardar(c)
+SA --> AG : [o]
+deactivate SA
+
+activate AG
+AG -> AG : seleccionarEjecutor(o.tipo)
+opt o.interrumpeUso (<<include>> CU08, RF15)
+  AG -> NOT : mostrarAviso(o)
+  NOT --> AG : desenlace : DesenlaceAviso
+end
+AG -> EJ : ejecutar(o)
+EJ --> AG : r : ResultadoEjecucion
+AG -> SA : registrarResultado(o.idComando, r)
+deactivate AG
+activate SA
+SA -> CR : obtenerPorId(id)
+SA -> CMD : registrarResultado(r)
+SA -> CR : guardar(c)
+SA -> BIT : cerrarEntrada(c, r.estado)
+BIT -> BR : cerrar(entrada)
+deactivate SA
+@enduml

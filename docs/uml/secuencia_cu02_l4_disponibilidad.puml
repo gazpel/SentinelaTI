@@ -1,0 +1,30 @@
+@startuml secuencia_cu02_l4_disponibilidad
+' SentinelaTI - CU02 "Reportar estado del equipo" refinado (L4), parte 3: detección de equipos desconectados
+' Render: java -jar plantuml.jar -tpng secuencia_cu02_l4_disponibilidad.puml
+!include estilo_secuencia_l4.iuml
+
+title CU02 refinado (L4) — parte 3: detección de equipos desconectados
+
+participant ":TareasPeriodicas" as TP
+control ":ServicioDisponibilidad" as SD
+entity ":EquipoRepository" as ER
+entity "e:Equipo" as EQ
+control ":GestorAlertas" as GA
+
+autonumber "<b>0"
+
+loop cada 60 s
+  TP -> SD : detectarDesconectados()
+  activate SD
+  SD -> ER : listarSinReporteDesde(ahora − 3 × intervalo)
+  ER --> SD : equipos sin reporte
+  loop por cada equipo sin reporte
+    SD -> EQ : marcarDesconectado()
+    SD -> ER : guardar(e)
+    SD -> GA : registrarDesconexion(e)
+    note right of GA : Una sola alerta abierta\npor equipo (RF16).
+  end
+  SD --> TP : equipos marcados
+  deactivate SD
+end
+@enduml

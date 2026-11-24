@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>W3 Aviso al usuario final</title><link rel="stylesheet" href="wf.css">
+<style>
+.desk { width: 1280px; height: 470px; border: 2px solid #555; background: repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#e2e2e2 12px,#e2e2e2 24px); position: relative; }
+.taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: #3a3a3a; color: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 16px; gap: 14px; font-size: 13px; }
+.tray { border: 1px solid #ccc; padding: 2px 8px; border-radius: 3px; }
+.notif { position: absolute; right: 24px; bottom: 56px; width: 460px; background: #fff; border: 2px solid #333; padding: 18px 20px; }
+.notif h2 { font-size: 18px; margin-bottom: 8px; }
+.count { font-size: 34px; font-weight: 700; margin: 8px 0; }
+.trayinfo { position: absolute; left: 30px; top: 30px; width: 420px; background: #fff; border: 1px solid #888; padding: 14px 16px; }
+</style></head>
+<body>
+<div class="desk">
+  <div class="trayinfo"><b>SentinelaTI — qué datos se recolectan</b><br><span style="font-size:13px;color:#444">Uso de CPU, RAM y disco, temperatura, horas encendido, inventario del equipo y actualizaciones pendientes. No se leen archivos, correos, navegación, teclado ni pantalla.</span><div class="foot">Se abre desde el ícono de la bandeja (RNF05, RNF11).</div></div>
+  <div class="notif">
+    <h2>Su equipo se reiniciará</h2>
+    El área de TI programó un <b>reinicio</b> de este computador. Guarde su trabajo antes de que termine el tiempo.
+    <div class="count">04:32</div>
+    <div class="row" style="justify-content:flex-start"><div class="btn pri">Reiniciar ahora</div><div class="btn">Posponer 30 minutos</div></div>
+    <div class="foot">Solo puede posponer una vez.</div>
+  </div>
+  <div class="taskbar"><span class="tray">◉ SentinelaTI</span><span>ES · 10:41</span></div>
+  <div class="ann" style="left:470px;top:250px;width:300px"><b>1</b>Lenguaje sin términos técnicos: el usuario final no conoce el panel.</div>
+  <div class="ann" style="left:470px;top:310px;width:300px"><b>2</b>Puede posponer una vez (RF15); el texto dice cuántas veces le quedan.</div>
+</div>
+</body></html>

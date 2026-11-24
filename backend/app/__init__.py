@@ -1,0 +1,1 @@
+"""SentinelaTI — API REST (FastAPI)."""

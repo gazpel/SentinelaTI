@@ -1,0 +1,66 @@
+@startuml clases_enumeraciones
+' SentinelaTI - Enumeraciones del modelo de clases (L3)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_enumeraciones.puml (requiere Graphviz; tambien se puede pegar en https://plantuml.com/plantuml)
+hide circle
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam nodesep 20
+skinparam ranksep 20
+skinparam class {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+  AttributeFontSize 10
+}
+
+title Enumeraciones del modelo de clases
+enum Rol {
+    Tecnico
+    Administrador
+  }
+  enum EstadoEquipo {
+    Normal
+    Advertencia
+    Critico
+    Desconectado
+  }
+  enum EstadoComando {
+    Pendiente
+    Entregado
+    Ejecutado
+    Fallido
+    Cancelado
+    Expirado
+  }
+  enum TipoAccion {
+    ReiniciarApagar
+    InstalarApp
+    ActualizarSO
+    Formatear
+    EscritorioRemoto
+  }
+  enum Metrica {
+    CPU
+    RAM
+    Disco
+    Temperatura
+    HorasEncendido
+  }
+  enum NivelAlerta {
+    Normal
+    Advertencia
+    Critico
+  }
+  enum ModoApagado {
+    Reiniciar
+    Apagar
+  }
+  enum DesenlaceAviso {
+    EjecutarAhora
+    CuentaTerminada
+    Pospuesto
+    SinSesionAbierta
+  }
+@enduml

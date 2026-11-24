@@ -1,0 +1,48 @@
+@startuml secuencia_cu07_l4_orden
+' SentinelaTI - CU07 "Ejecutar acción remota" refinado (L4), parte 1: orden, autorización y registro
+' Render: java -jar plantuml.jar -tpng secuencia_cu07_l4_orden.puml
+!include estilo_secuencia_l4.iuml
+
+title CU07 refinado (L4) — parte 1: orden, autorización y registro
+
+actor "Técnico\nde TI" as TEC
+boundary ":VistaDetalle\nEquipo" as WEB
+control ":Servicio\nAcciones" as SA
+control ":Servicio\nAutenticacion" as AUT
+control ":Bitacora\nAuditoria" as BIT
+entity "c:ComandoReinicio\nApagado" as CMD
+entity ":Comando\nRepository" as CR
+entity ":Bitacora\nRepository" as BR
+
+autonumber "<b>0"
+
+TEC -> WEB : Acciones > Reiniciar > confirmar
+activate WEB
+WEB -> SA : crearComando(s, e, ReiniciarApagar, p)
+activate SA
+SA -> AUT : autorizar(s, OrdenarAccion)
+note right of AUT : TipoAccion →\nPermiso (RNF07).
+AUT --> SA : permitido : Boolean
+alt sin permiso (excepción 1f)
+  SA -> BIT : registrarIntentoDenegado(u, t)
+  SA --> WEB : HTTP 403
+else autorizado
+  SA -> CMD : <<create>> (e, Reiniciar)
+  SA -> BIT : registrarOrden(c, u)
+  activate BIT
+  BIT -> BR : agregar(entrada)
+  alt falla la escritura (excepción 2a de CU09)
+    BR --> BIT : error de persistencia
+    BIT --> SA : error
+    SA --> WEB : HTTP 500 — no hay acción\nsin registro (RNF12)
+  else registro correcto
+    BIT --> SA : entrada abierta
+    deactivate BIT
+    SA -> CR : guardar(c)
+    SA --> WEB : c (Pendiente)
+  end
+end
+deactivate SA
+WEB --> TEC : resultado de la orden
+deactivate WEB
+@enduml

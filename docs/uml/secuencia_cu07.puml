@@ -1,0 +1,165 @@
+@startuml secuencia_cu07
+' SentinelaTI - Diagrama de secuencia CU07 "Ejecutar acción remota" (L3)
+' Escenario: reinicio remoto de un equipo, con sus flujos alternativos y excepciones.
+' Render: java -jar plantuml.jar -tpng secuencia_cu07.puml (no requiere Graphviz)
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 12
+skinparam ArrowColor #333333
+skinparam maxMessageSize 220
+skinparam sequence {
+  ParticipantBackgroundColor #EAF4F5
+  ParticipantBorderColor #1F6F78
+  ActorBackgroundColor #EAF4F5
+  ActorBorderColor #1F6F78
+  LifeLineBorderColor #1F6F78
+  BoxBackgroundColor #FBFBFB
+  BoxBorderColor #1F6F78
+  GroupBackgroundColor #EAF4F5
+  GroupBorderColor #1F6F78
+}
+
+title CU07 — Ejecutar acción remota (escenario: reinicio de un equipo)
+
+actor "Técnico de TI" as TEC
+box "Panel web (React)" #FFFFFF
+  boundary ":VistaDetalleEquipo" as WEB
+end box
+box "Servidor (API REST)" #FFFFFF
+  control ":ServicioAutenticacion" as AUT
+  control ":ServicioAcciones" as SA
+  entity "e:Equipo" as EQ
+  entity "c:ComandoReinicioApagado" as CMD
+  control ":BitacoraAuditoria" as BIT
+  database "db:PostgreSQL" as DB
+end box
+box "Equipo cliente" #FFFFFF
+  participant "ag:AgenteSentinela" as AG
+  boundary ":NotificadorUsuario" as NOT
+end box
+actor "Usuario final" as USF
+
+autonumber "<b>0"
+
+TEC -> WEB : pulsar «Acciones» > Reiniciar\n(punto de extensión de CU05)
+activate WEB
+WEB -> WEB : mostrarResumenImpacto()
+WEB --> TEC : resumen de la acción
+
+alt el técnico cancela en el resumen (excepción 3a)
+  TEC -> WEB : cancelar
+  WEB --> TEC : no se crea ningún comando
+else el técnico confirma
+  TEC -> WEB : confirmar
+  WEB -> SA : crearComando(s, e, ReiniciarApagar, p)
+  activate SA
+
+  SA -> AUT : autorizar(s, ReiniciarApagar)
+  activate AUT
+  AUT --> SA : permitido : Boolean
+  deactivate AUT
+
+  alt el rol no permite la acción (excepción 1f, RNF07)
+    SA -> BIT : registrarIntentoDenegado(s.usuario, t)
+    SA --> WEB : HTTP 403 Forbidden
+    WEB --> TEC : «No tiene permisos para esta acción»
+  else autorizado
+    SA -> CMD : <<create>> ComandoReinicioApagado(e, modo = Reiniciar)
+    activate CMD
+    CMD --> SA : estado = Pendiente
+    deactivate CMD
+
+    SA -> BIT : registrarOrden(c, s.usuario)\n<<include>> CU09
+    activate BIT
+    BIT -> DB : INSERT entrada_bitacora
+    activate BIT
+    alt falla la escritura en la bitácora (excepción 2a de CU09)
+      BIT --> SA : error de persistencia
+      SA -> CMD : cancelar()
+      SA --> WEB : HTTP 500 — no hay acción sin registro
+      WEB --> TEC : «No se pudo registrar la orden»
+    else registro correcto
+      DB --> BIT : ok
+      BIT --> SA : entrada creada
+      SA -> DB : INSERT comando (Pendiente)
+      deactivate BIT
+      SA --> WEB : c (Pendiente)
+      WEB --> TEC : «Orden enviada, en espera del equipo»
+      deactivate SA
+
+      == Entrega del comando al agente (sondeo cada 60 s) ==
+
+      loop cada 60 s mientras el comando esté Pendiente
+        AG -> SA : comandosPendientes(token)
+        SA -> DB : SELECT comandos Pendiente
+        DB --> SA : [c]
+        activate AG
+        activate SA
+        alt el equipo responde (en línea)
+          SA -> CMD : marcarEntregado()
+          SA -> DB : UPDATE comando (Entregado)
+          SA --> AG : [c]
+          deactivate SA
+        else el equipo sigue Desconectado (flujo alternativo 5a)
+          SA -> CMD : haExpirado(ahora)
+          alt han pasado más de 24 h
+            SA -> CMD : expirar()
+            SA -> BIT : cerrarEntrada(c, Expirado)
+          else el técnico cancela la orden pendiente
+            TEC -> WEB : cancelar orden
+            WEB -> SA : cancelar(s, c.idComando)
+            SA -> CMD : cancelar()
+            SA -> BIT : cerrarEntrada(c, Cancelado)
+          end
+        end
+      end
+
+      == Ejecución en el equipo ==
+
+      AG -> CMD : interrumpeUso()
+      CMD --> AG : true
+
+      opt la acción interrumpe el uso del equipo (<<include>> CU08, RF15)
+        AG -> NOT : mostrarAviso(a : AvisoUsuario)
+        activate NOT
+        NOT -> USF : aviso con cuenta regresiva de 5 min
+        alt el usuario pospone 30 min (una sola vez)
+          USF -> NOT : «Posponer 30 min»
+          NOT --> AG : Pospuesto
+          ...30 minutos después...
+          NOT -> USF : aviso sin opción de posponer
+          USF --> NOT : (termina la cuenta regresiva)
+        else el usuario pulsa «Ejecutar ahora» o termina la cuenta
+          USF -> NOT : «Ejecutar ahora»
+        else no hay sesión abierta (flujo alternativo 1a de CU08)
+          NOT --> AG : SinSesionAbierta
+        end
+        NOT --> AG : desenlace : DesenlaceAviso
+        deactivate NOT
+      end
+
+      AG -> AG : ejecutarComando(c)
+      alt la ejecución es correcta
+        AG -> SA : registrarResultado(c.idComando, Ejecutado)
+        activate SA
+        SA -> CMD : registrarResultado(Ejecutado)
+        SA -> EQ : marcarDesconectado()
+        note right of EQ : El equipo se reinicia:\nqueda Desconectado hasta\nsu próximo reporte (CU02).
+        SA -> BIT : cerrarEntrada(c, Ejecutado)
+        BIT -> DB : UPDATE entrada_bitacora (cerrada)
+      else la ejecución falla (excepción 7a)
+        AG -> SA : registrarResultado(c.idComando, Fallido, motivo)
+        SA -> CMD : registrarResultado(Fallido, motivo)
+        SA -> BIT : cerrarEntrada(c, Fallido)
+        BIT -> DB : UPDATE entrada_bitacora (cerrada)
+      end
+      deactivate AG
+      SA --> WEB : estado final del comando
+      deactivate SA
+      WEB --> TEC : resultado de la acción
+      deactivate WEB
+    end
+  end
+end
+@enduml

@@ -1,0 +1,81 @@
+@startuml clases_persistencia_l4
+' SentinelaTI - Contratos de persistencia (dominio) y sus implementaciones (infraestructura), L4
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_persistencia_l4.puml
+!include estilo_clases_l4.iuml
+left to right direction
+
+title Contratos de persistencia (patrón Repositorio) e implementaciones PostgreSQL
+
+package "Capa de dominio — contratos" {
+  interface EquipoRepository <<nueva>> {
+    + obtenerPorId(id : UUID) : Equipo [0..1]
+    + buscarPorNumeroSerie(serie : String) : Equipo [0..1]
+    + buscarPorToken(token : String) : Equipo [0..1]
+    + listarConFiltros(estado [0..1], texto [0..1], pagina, tamano) : Equipo [0..*] {ordered}
+    + contarPorEstado() : Map<EstadoEquipo, Integer>
+    + listarSinReporteDesde(limite : DateTime) : Equipo [0..*]
+    + guardar(e : Equipo) : void
+  }
+  interface LecturaRepository <<nueva>> {
+    + agregar(e : Equipo, l : Lectura) : void
+    + historial(e, desde, hasta : DateTime) : Lectura [0..*]
+  }
+  interface ComandoRepository <<nueva>> {
+    + guardar(c : Comando) : void
+    + obtenerPorId(id : UUID) : Comando [0..1]
+    + pendientesDe(e : Equipo) : Comando [0..*]
+    + vencidos(ahora : DateTime) : Comando [0..*]
+  }
+  interface UsuarioRepository <<nueva>> {
+    + obtenerPorCorreo(correo : String) : Usuario [0..1]
+    + obtenerPorId(id : UUID) : Usuario [0..1]
+    + listar() : Usuario [0..*]
+    + guardar(u : Usuario) : void
+  }
+  interface AlertaRepository <<nueva>> {
+    + abiertaDe(e : Equipo, m : Metrica [0..1]) : Alerta [0..1]
+    + listarAbiertas(pagina, tamano : Integer) : Alerta [0..*] {ordered}
+    + contarAbiertas() : Integer
+    + guardar(a : Alerta) : void
+  }
+  interface ConfiguracionRepository <<nueva>> {
+    + obtener() : ConfiguracionUmbrales
+    + guardar(c : ConfiguracionUmbrales) : void
+  }
+  interface BitacoraRepository <<nueva>> {
+    + agregar(en : EntradaBitacora) : void
+    + cerrar(en : EntradaBitacora) : void
+    + buscar(f : FiltroBitacora) : EntradaBitacora [0..*]
+  }
+}
+
+package "Capa de infraestructura (PostgreSQL)" {
+  class EquipoRepositoryPg <<nueva>>
+  class LecturaRepositoryPg <<nueva>>
+  class ComandoRepositoryPg <<nueva>>
+  class UsuarioRepositoryPg <<nueva>>
+  class AlertaRepositoryPg <<nueva>>
+  class ConfiguracionRepositoryPg <<nueva>>
+  class BitacoraRepositoryPg <<nueva>>
+}
+
+EquipoRepository <|.. EquipoRepositoryPg
+LecturaRepository <|.. LecturaRepositoryPg
+ComandoRepository <|.. ComandoRepositoryPg
+UsuarioRepository <|.. UsuarioRepositoryPg
+AlertaRepository <|.. AlertaRepositoryPg
+ConfiguracionRepository <|.. ConfiguracionRepositoryPg
+BitacoraRepository <|.. BitacoraRepositoryPg
+
+note top of EquipoRepository
+  {ordered}: listarConFiltros() devuelve los equipos
+  por severidad (Crítico, Advertencia, Desconectado,
+  Normal) y paginados (RNF06, RNF08).
+end note
+
+note bottom of BitacoraRepository
+  Sin operaciones de edición ni de borrado:
+  cerrar() solo completa una entrada
+  abierta (RF14, RNF12).
+end note
+@enduml

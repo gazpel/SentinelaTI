@@ -1,0 +1,366 @@
+@startuml clases_dominio
+' SentinelaTI - Diagrama de clases del servidor (L3)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng clases_dominio.puml (requiere Graphviz; tambien se puede pegar en https://plantuml.com/plantuml)
+hide circle
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam nodesep 25
+skinparam ranksep 45
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam class {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+  AttributeFontSize 10
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}
+
+title Diagrama de clases de SentinelaTI — servidor (API y dominio)
+
+package "Seguridad y usuarios" {
+  abstract class Usuario {
+    - idUsuario : UUID
+    - nombre : String
+    - correo : String
+    - hashContrasena : String
+    - activo : Boolean
+    - debeCambiarContrasena : Boolean
+    - intentosFallidos : Integer
+    - bloqueadoHasta : DateTime [0..1]
+    + autenticar(contrasena : String) : Boolean
+    + cambiarContrasena(nueva : String) : void
+    + desactivar() : void
+    + estaBloqueado() : Boolean
+    + {abstract} rol() : Rol
+    + {abstract} puedeEjecutar(a : TipoAccion) : Boolean
+  }
+
+  class Tecnico {
+    + rol() : Rol
+    + puedeEjecutar(a : TipoAccion) : Boolean
+  }
+
+  class Administrador {
+    + rol() : Rol
+    + puedeEjecutar(a : TipoAccion) : Boolean
+    + definirUmbral(m : Metrica, adv : Real, crit : Real) : void
+    + crearUsuario(nombre : String, correo : String, r : Rol) : Usuario
+  }
+
+  class Sesion {
+    - idSesion : UUID
+    - tokenJWT : String
+    - fechaInicio : DateTime
+    - fechaExpiracion : DateTime
+    + estaVigente() : Boolean
+    + cerrar() : void
+  }
+
+  Usuario <|-- Tecnico
+  Tecnico <|-- Administrador
+  Usuario "1" *-- "0..*" Sesion : abre >
+}
+
+package "Monitoreo del parque" {
+  class Equipo {
+    - idEquipo : UUID
+    - nombre : String
+    - numeroSerie : String {unique}
+    - modelo : String
+    - direccionIP : String
+    - ultimoUsuario : String
+    - estado : EstadoEquipo
+    - fechaEnrolamiento : DateTime
+    - fechaUltimoReporte : DateTime
+    + registrarLectura(l : Lectura) : void
+    + evaluarEstado(c : ConfiguracionUmbrales) : EstadoEquipo
+    + marcarDesconectado() : void
+    + estaEnLinea() : Boolean
+    + actualizarInventario(i : Inventario) : void
+    + actualizarEstadoSO(e : EstadoActualizacionSO) : void
+    + revocarTokenVigente() : void
+    + historial(desde : DateTime, hasta : DateTime) : Lectura [0..*]
+  }
+
+  class TokenAgente {
+    - valor : String
+    - fechaEmision : DateTime
+    - revocado : Boolean
+    + revocar() : void
+    + esValido() : Boolean
+  }
+
+  class Lectura {
+    - idLectura : UUID
+    - marcaTiempo : DateTime
+    - usoCPU : Real
+    - usoRAM : Real
+    - temperaturaCPU : Real [0..1]
+    - horasEncendido : Real
+    - fechaRecepcion : DateTime
+    + valorDe(m : Metrica) : Real [0..1]
+  }
+
+  class UsoDisco {
+    - unidad : String
+    - capacidadGB : Real
+    - usoPorcentaje : Real
+  }
+
+  class ParqueComputacional {
+    - nombre : String
+    + listar(estado : EstadoEquipo [0..1]) : Equipo [0..*]
+    + buscar(texto : String) : Equipo [0..*]
+    + resumenPorEstado() : Map<EstadoEquipo, Integer>
+  }
+
+  class Inventario {
+    - fechaReporte : DateTime
+    + actualizar(i : Inventario) : void
+  }
+
+  class EstadoActualizacionSO {
+    - fechaReporte : DateTime
+    - actualizacionesPendientes : Integer
+    - fechaUltimaActualizacion : Date [0..1]
+    + actualizar(e : EstadoActualizacionSO) : void
+  }
+
+  class AplicacionInstalada {
+    - nombre : String
+    - version : String
+    - editor : String
+  }
+
+  class ConfiguracionUmbrales {
+    - fechaModificacion : DateTime
+    + umbralDe(m : Metrica) : Umbral
+    + restablecerPorDefecto() : void
+    + validar() : Boolean
+  }
+
+  class Umbral {
+    - metrica : Metrica
+    - valorAdvertencia : Real
+    - valorCritico : Real
+    + evaluar(valor : Real) : NivelAlerta
+  }
+
+  class Alerta {
+    - idAlerta : UUID
+    - metrica : Metrica
+    - nivel : NivelAlerta
+    - valorDisparo : Real [0..1]
+    - fechaApertura : DateTime
+    - fechaCierre : DateTime [0..1]
+    + estaAbierta() : Boolean
+    + cerrar() : void
+  }
+
+  Equipo "1" *-- "1..*" TokenAgente : emite >
+  Equipo "1" *-- "0..*" Lectura : registra >
+  Lectura "1" *-- "1..*" UsoDisco : detalla >
+  ParqueComputacional "1" o-- "0..*" Equipo : agrupa >
+  Equipo "1" *-- "0..1" Inventario : describe >
+  Equipo "1" *-- "0..1" EstadoActualizacionSO : informa >
+  Inventario "1" *-- "0..*" AplicacionInstalada : contiene >
+  Equipo "1" -- "0..*" Alerta : presenta >
+  ConfiguracionUmbrales "1" *-- "5" Umbral : define >
+}
+
+package "Acciones remotas" {
+  abstract class Comando {
+    - idComando : UUID
+    - estado : EstadoComando
+    - fechaOrden : DateTime
+    - fechaEntrega : DateTime [0..1]
+    - fechaResultado : DateTime [0..1]
+    - motivoFallo : String [0..1]
+    # simulado : Boolean
+    + {abstract} tipo() : TipoAccion
+    + {abstract} interrumpeUso() : Boolean
+    + {abstract} ejecutarEnAgente() : ResultadoEjecucion
+    + marcarEntregado() : void
+    + registrarResultado(r : ResultadoEjecucion) : void
+    + cancelar() : void
+    + expirar() : void
+    + haExpirado(ahora : DateTime) : Boolean
+  }
+
+  class ComandoReinicioApagado {
+    - modo : ModoApagado
+    + tipo() : TipoAccion
+    + interrumpeUso() : Boolean
+    + ejecutarEnAgente() : ResultadoEjecucion
+  }
+
+  class ComandoInstalacionApp {
+    + tipo() : TipoAccion
+    + interrumpeUso() : Boolean
+    + ejecutarEnAgente() : ResultadoEjecucion
+  }
+
+  class ComandoActualizacionSO {
+    + tipo() : TipoAccion
+    + interrumpeUso() : Boolean
+    + ejecutarEnAgente() : ResultadoEjecucion
+  }
+
+  class ComandoFormateo {
+    - nombreConfirmado : String
+    + tipo() : TipoAccion
+    + interrumpeUso() : Boolean
+    + ejecutarEnAgente() : ResultadoEjecucion
+    + confirmacionValida(e : Equipo) : Boolean
+  }
+
+  class ComandoEscritorioRemoto {
+    - inicioSesion : DateTime [0..1]
+    - finSesion : DateTime [0..1]
+    + tipo() : TipoAccion
+    + interrumpeUso() : Boolean
+    + ejecutarEnAgente() : ResultadoEjecucion
+  }
+
+  class AvisoUsuario {
+    - fechaMostrado : DateTime
+    - segundosCuentaRegresiva : Integer = 300
+    - pospuesto : Boolean = false
+    - fechaReprogramada : DateTime [0..1]
+    - desenlace : DesenlaceAviso
+    + posponer30min() : Boolean
+    + ejecutarAhora() : void
+  }
+
+  class CatalogoAplicaciones {
+    - fechaCarga : DateTime
+    + buscar(nombre : String) : AplicacionAprobada [0..*]
+    + contiene(a : AplicacionAprobada) : Boolean
+  }
+
+  class AplicacionAprobada {
+    - idApp : String
+    - nombre : String
+    - version : String
+    - editor : String
+    - identificadorWinget : String
+  }
+
+  Comando <|-- ComandoReinicioApagado
+  Comando <|-- ComandoInstalacionApp
+  Comando <|-- ComandoActualizacionSO
+  Comando <|-- ComandoFormateo
+  Comando <|-- ComandoEscritorioRemoto
+
+  Comando "1" *-- "0..1" AvisoUsuario : muestra >
+  CatalogoAplicaciones "1" o-- "0..*" AplicacionAprobada : agrupa >
+  ComandoInstalacionApp "0..*" --> "1" AplicacionAprobada : instala >
+}
+
+package "Auditoría y alertas" {
+  class BitacoraAuditoria {
+    + registrarOrden(c : Comando, u : Usuario) : EntradaBitacora
+    + cerrarEntrada(c : Comando, e : EstadoComando) : void
+    + registrarIntentoDenegado(u : Usuario, t : TipoAccion) : EntradaBitacora
+    + consultar(f : FiltroBitacora) : EntradaBitacora [0..*]
+  }
+
+  class EntradaBitacora {
+    - idEntrada : UUID
+    - fechaOrden : DateTime
+    - fechaResultado : DateTime [0..1]
+    - tipoAccion : TipoAccion
+    - estadoResultante : EstadoComando
+    - nombreUsuario : String
+    - nombreEquipo : String
+    - detalle : String
+    - cerrada : Boolean = false
+    + cerrar(e : EstadoComando, f : DateTime) : void
+    + {readOnly} esInmutable() : Boolean
+  }
+
+  class FiltroBitacora {
+    - idEquipo : UUID [0..1]
+    - idUsuario : UUID [0..1]
+    - tipoAccion : TipoAccion [0..1]
+    - desde : Date [0..1]
+    - hasta : Date [0..1]
+    + esValido() : Boolean
+  }
+
+  BitacoraAuditoria "1" *-- "0..*" EntradaBitacora : conserva >
+}
+
+package "Servicios de aplicación (API REST)" {
+  class ServicioAutenticacion {
+    + iniciarSesion(correo : String, clave : String) : Sesion
+    + validarSesion(jwt : String) : Sesion
+    + autorizar(s : Sesion, a : TipoAccion) : Boolean
+  }
+
+  class ServicioEnrolamiento {
+    - codigoOrganizacion : String
+    + enrolar(codigo : String, datos : DatosEquipo) : TokenAgente
+    + validarCodigo(codigo : String) : Boolean
+    + buscarPorNumeroSerie(serie : String) : Equipo [0..1]
+  }
+
+  class ServicioMonitoreo {
+    + recibirLectura(token : String, l : Lectura) : void
+    + recibirInventario(token : String, i : Inventario) : void
+    + recibirEstadoActualizaciones(token : String, e : EstadoActualizacionSO) : void
+    + detectarDesconectados() : Equipo [0..*]
+  }
+
+  class GestorAlertas {
+    + evaluar(e : Equipo, l : Lectura, c : ConfiguracionUmbrales) : Alerta [0..*]
+    + evaluarMetrica(l : Lectura, m : Metrica, u : Umbral) : NivelAlerta
+    + abrirAlerta(e : Equipo, m : Metrica, n : NivelAlerta) : Alerta
+    + cerrarAlerta(a : Alerta) : void
+  }
+
+  class ServicioAcciones {
+    + crearComando(s : Sesion, e : Equipo, t : TipoAccion, p : Parametros) : Comando
+    + comandosPendientes(token : String) : Comando [0..*]
+    + registrarResultado(id : UUID, r : ResultadoEjecucion) : void
+    + cancelar(s : Sesion, id : UUID) : void
+    + expirarVencidos() : void
+  }
+}
+
+' --- Relaciones entre paquetes ---
+Usuario "1" -- "0..*" Comando : ordena >
+Equipo "1" -- "0..*" Comando : recibe >
+EntradaBitacora "0..1" --> "0..1" Comando : documenta >
+note bottom of EntradaBitacora
+  {Todo Comando creado tiene exactamente una
+  EntradaBitacora (RF14). Las entradas sin Comando
+  corresponden a intentos denegados
+  (excepción 1f de CU07).}
+end note
+
+ServicioAutenticacion ..> Usuario : <<use>>
+ServicioAutenticacion ..> Sesion : <<create>>
+ServicioEnrolamiento ..> Equipo : <<create>>
+ServicioMonitoreo ..> Lectura : <<use>>
+ServicioMonitoreo ..> GestorAlertas : <<use>>
+GestorAlertas ..> Alerta : <<create>>
+GestorAlertas ..> ConfiguracionUmbrales : <<use>>
+ServicioAcciones ..> Comando : <<create>>
+ServicioAcciones ..> BitacoraAuditoria : <<use>>
+ServicioAcciones ..> CatalogoAplicaciones : <<use>>
+
+' --- Ayudas de distribucion (enlaces ocultos) ---
+Sesion -[hidden]down- Equipo
+ServicioAcciones -[hidden]down- BitacoraAuditoria
+Umbral -[hidden]down- Comando
+
+
+@enduml

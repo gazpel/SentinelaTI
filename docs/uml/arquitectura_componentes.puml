@@ -1,0 +1,103 @@
+@startuml arquitectura_componentes
+' SentinelaTI - Vista lógica: diagrama de componentes (L4)
+' Render: java -jar plantuml.jar -graphvizdot <ruta>/dot.exe -tpng arquitectura_componentes.puml
+skinparam dpi 150
+skinparam shadowing false
+skinparam defaultFontName Calibri
+skinparam defaultFontSize 11
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 10
+skinparam nodesep 30
+skinparam ranksep 40
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+  FontColor #0B3C40
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1F6F78
+  FontColor #1F6F78
+}
+skinparam database {
+  BackgroundColor #EAF4F5
+  BorderColor #1F6F78
+}
+
+title Vista lógica de SentinelaTI — componentes y conectores
+
+package "Windows 10/11 (sistemas externos)" as WIN {
+  interface "WMI / psutil" as IWMI
+  interface "Windows Update" as IWU
+  interface "winget" as IWG
+}
+
+package "Agente SentinelaTI (servicio de Windows)" as AGT {
+  component "Recolectores" as REC
+  component "Ejecutores\n(estrategias)" as EJE
+  component "NotificadorUsuario" as NOT
+  component "ColaLocalLecturas" as COLA
+  component "ClienteAPI" as CLI
+}
+
+component "Panel web\n(React)" as PANEL
+
+package "Servidor SentinelaTI (API REST · FastAPI)" as SRV {
+  package "Capa de presentación" as CP {
+    component "RoutersPanel" as RP
+    component "RoutersAgente" as RA
+  }
+  package "Capa de aplicación" as CA {
+    component "Servicios de\naplicación" as SVC
+    component "TareasPeriodicas" as TP
+  }
+  package "Capa de dominio" as CD {
+    component "Modelo de\ndominio" as DOM
+    interface "Repositorios" as IREP
+  }
+  package "Capa de infraestructura" as CI {
+    component "Repositorios\nPostgreSQL" as RPG
+  }
+}
+
+database "PostgreSQL" as DB
+
+interface "IPanelAPI\n/api/panel · JWT" as IPANEL
+interface "IAgenteAPI\n/api/agente · token" as IAGENTE
+
+REC .up.> IWMI
+REC .up.> IWU
+EJE .up.> IWG
+EJE .up.> IWMI
+EJE ..> NOT : aviso previo\n(RF15)
+REC ..> COLA : encola si\nno hay red
+REC ..> CLI : lecturas
+EJE ..> CLI : resultado
+
+RP -up- IPANEL
+RA -up- IAGENTE
+PANEL ..> IPANEL : HTTPS (TLS 1.2+)
+CLI ..> IAGENTE : HTTPS saliente\nlecturas c/5 min\nsondeo c/60 s
+
+RP ..> SVC
+RA ..> SVC
+TP ..> SVC : cada 60 s
+SVC ..> DOM
+SVC ..> IREP
+DOM ..> IREP
+RPG -up-|> IREP : implementa
+RPG ..> DB : SQL / TCP 5432
+
+PANEL -[hidden]right- AGT
+
+note right of IREP
+  Contratos definidos en el dominio
+  e implementados en infraestructura
+  (inversión de dependencias).
+end note
+@enduml
